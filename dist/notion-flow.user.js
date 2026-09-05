@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NotionFlow - Desktop Superpowers on Mobile iOS
 // @namespace    https://github.com/intelQong/NotionFlow
-// @version      1.1.0
+// @version      1.2.0
 // @description  Forces desktop Notion on iOS with dynamic UI/UX adaptation: snap carousels, sticky table headers, touch handles, and floating toolbar.
 // @author       intelQong
 // @match        https://app.notion.com/*
