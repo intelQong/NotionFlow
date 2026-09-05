@@ -14,7 +14,8 @@
 
 <p align="center">
   <a href="#-the-problem-vs-notionflow">Why NotionFlow?</a> •
-  <a href="#-quick-install-60-seconds">60s Safari Install</a> •
+  <a href="#-quick-install-60-seconds--zero-mac-required">60s Safari Install</a> •
+  <a href="#-how-to-add-to-your-iphone--ipad-home-screen">Add to Home Screen</a> •
   <a href="#-superpowers">Superpowers</a> •
   <a href="#-local-interactive-simulator">Simulator</a> •
   <a href="#-development--build">Development</a>
@@ -71,10 +72,35 @@ Choose either quick method:
   2. Tap the Safari **Extensions** icon (puzzle piece 🧩 or `aA`) ➔ tap **Userscripts**.
   3. Tap **`+` (New Script)**, paste the code, and tap **Save**.
 
-### Step 4: Open Notion & Save to Home Screen
-1. Open [`https://www.notion.so`](https://www.notion.so) in Safari.
-2. Notion automatically runs in **full desktop mode** with all touch superpowers active.
-3. *(Optional / Recommended)* Tap the Safari **Share** icon (square with arrow) ➔ **Add to Home Screen** to run NotionFlow in an edge-to-edge standalone app view!
+### Step 4: Open Notion in Safari
+1. Open [`https://www.notion.so`](https://www.notion.so) in Safari on your iPhone or iPad.
+2. Notion will automatically load in **full desktop mode** with NotionFlow's touch engine active (snap carousels, sticky headers, touch handles, floating toolbars, and full settings access).
+
+---
+
+## 📲 How to Add to Your iPhone / iPad Home Screen
+
+Turn NotionFlow into a **distraction-free, full-screen standalone experience** that removes Safari's browser URL bar and bottom toolbar:
+
+```
+┌───────────────────────────┐      ┌───────────────────────────┐      ┌───────────────────────────┐
+│ 1. Open notion.so         │ ──▶  │ 2. Tap Safari Share (⬆️)   │ ──▶  │ 3. Add to Home Screen     │
+│ In Safari on iPhone/iPad  │      │ Scroll down in Share menu │      │ Launches full-screen PWA  │
+└───────────────────────────┘      └───────────────────────────┘      └───────────────────────────┘
+```
+
+### Step-by-Step:
+1. **Open Notion**: Go to [`https://www.notion.so`](https://www.notion.so) in Safari on your iPhone or iPad. Make sure you are logged in.
+2. **Open the Share Menu**: Tap the Safari **Share** icon at the bottom of your screen (the square with an arrow pointing up `⬆️`).
+3. **Tap "Add to Home Screen"**: Scroll down through the action sheet and tap **Add to Home Screen** (or *Zum Home-Bildschirm*, *Sur l'écran d'accueil*).
+4. **Name the Shortcut**: Name it **NotionFlow** (or **Notion Desktop**) and tap **Add** in the top-right corner.
+5. **Launch from Home Screen**: A dedicated icon will appear on your iPhone/iPad Home Screen. Tap it to launch NotionFlow!
+
+> [!TIP]
+> **Why Add to Home Screen?**
+> * 🚫 **No Browser Bars**: Completely removes Safari's top URL bar and bottom tab bar for 100% edge-to-edge screen real estate.
+> * ⚡ **Instant App Switching**: Appears as its own independent window in the iOS App Switcher.
+> * 🖤 **Edge-to-Edge OLED**: Automatically integrates with the Dynamic Island, notch, and Home Indicator insets.
 
 ---
 
