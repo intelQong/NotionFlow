@@ -14,6 +14,8 @@ const banner = `// ==UserScript==
 // @author       intelQong
 // @match        https://*.notion.so/*
 // @match        https://notion.so/*
+// @match        https://*.notion.com/*
+// @match        https://notion.com/*
 // @match        https://*.notion.site/*
 // @run-at       document-start
 // @grant        none

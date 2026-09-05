@@ -6,6 +6,8 @@
 // @author       intelQong
 // @match        https://*.notion.so/*
 // @match        https://notion.so/*
+// @match        https://*.notion.com/*
+// @match        https://notion.com/*
 // @match        https://*.notion.site/*
 // @run-at       document-start
 // @grant        none
@@ -61,7 +63,8 @@
       .notion-mobile-banner,
       [data-testid="mobile-app-banner"],
       div[style*="position: fixed"][style*="bottom: 0"] a[href*="itunes.apple.com"],
-      div[style*="position: fixed"][style*="bottom: 0"] a[href*="notion.so/mobile"] {
+      div[style*="position: fixed"][style*="bottom: 0"] a[href*="notion.so/mobile"],
+      div[style*="position: fixed"][style*="bottom: 0"] a[href*="notion.com/mobile"] {
         display: none !important;
         visibility: hidden !important;
         pointer-events: none !important;

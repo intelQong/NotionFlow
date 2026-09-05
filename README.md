@@ -73,7 +73,7 @@ Choose either quick method:
   3. Tap **`+` (New Script)**, paste the code, and tap **Save**.
 
 ### Step 4: Open Notion in Safari
-1. Open [`https://www.notion.so`](https://www.notion.so) in Safari on your iPhone or iPad.
+1. Open [`https://www.notion.so`](https://www.notion.so) or [`https://www.notion.com`](https://www.notion.com) in Safari on your iPhone or iPad.
 2. Notion will automatically load in **full desktop mode** with NotionFlow's touch engine active (snap carousels, sticky headers, touch handles, floating toolbars, and full settings access).
 
 ---
@@ -84,13 +84,13 @@ Turn NotionFlow into a **distraction-free, full-screen standalone experience** t
 
 ```
 ┌───────────────────────────┐      ┌───────────────────────────┐      ┌───────────────────────────┐
-│ 1. Open notion.so         │ ──▶  │ 2. Tap Safari Share (⬆️)   │ ──▶  │ 3. Add to Home Screen     │
+│ 1. Open notion.so/.com    │ ──▶  │ 2. Tap Safari Share (⬆️)   │ ──▶  │ 3. Add to Home Screen     │
 │ In Safari on iPhone/iPad  │      │ Scroll down in Share menu │      │ Launches full-screen PWA  │
 └───────────────────────────┘      └───────────────────────────┘      └───────────────────────────┘
 ```
 
 ### Step-by-Step:
-1. **Open Notion**: Go to [`https://www.notion.so`](https://www.notion.so) in Safari on your iPhone or iPad. Make sure you are logged in.
+1. **Open Notion**: Go to [`https://www.notion.so`](https://www.notion.so) (or `notion.com`) in Safari on your iPhone or iPad. Make sure you are logged in.
 2. **Open the Share Menu**: Tap the Safari **Share** icon at the bottom of your screen (the square with an arrow pointing up `⬆️`).
 3. **Tap "Add to Home Screen"**: Scroll down through the action sheet and tap **Add to Home Screen** (or *Zum Home-Bildschirm*, *Sur l'écran d'accueil*).
 4. **Name the Shortcut**: Name it **NotionFlow** (or **Notion Desktop**) and tap **Add** in the top-right corner.
