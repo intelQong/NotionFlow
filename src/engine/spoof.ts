@@ -1,48 +1,108 @@
 /**
  * NotionFlow - Desktop Spoofing & Environment Masking
- * Masks iOS mobile environment, overrides navigator properties,
- * and suppresses mobile app banners / redirect loops.
+ * Completely masks iOS mobile environment, overrides navigator properties,
+ * screen dimensions, pointer media queries, and suppresses mobile banners/redirects.
+ * Ensures Notion serves full desktop Settings & Members and desktop Notifications.
  */
 
 export function initSpoofing(): void {
-  // 1. Spoof navigator.platform to MacIntel (standard macOS Safari/Chrome)
-  try {
-    Object.defineProperty(navigator, 'platform', {
-      get: () => 'MacIntel',
-      configurable: true,
-    });
-  } catch (e) {
-    console.warn('[NotionFlow] Unable to override navigator.platform:', e);
-  }
+  const DESKTOP_UA =
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15';
+  const DESKTOP_APP_VERSION =
+    '5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15';
 
-  // 2. Spoof UserAgentData if supported by modern WebKit
-  if ('userAgentData' in navigator && (navigator as any).userAgentData) {
+  const overrideProp = (target: any, prop: string, getter: () => any) => {
     try {
-      Object.defineProperty(navigator, 'userAgentData', {
-        get: () => ({
-          brands: [
-            { brand: 'Google Chrome', version: '124' },
-            { brand: 'Chromium', version: '124' },
-            { brand: 'Not-A.Brand', version: '24' }
-          ],
-          mobile: false,
-          platform: 'macOS',
-          getHighEntropyValues: async () => ({
-            architecture: 'arm',
-            model: '',
-            platform: 'macOS',
-            platformVersion: '14.5.0',
-            uaFullVersion: '124.0.6367.208'
-          })
-        }),
-        configurable: true
+      Object.defineProperty(target, prop, {
+        get: getter,
+        configurable: true,
+        enumerable: true
       });
-    } catch (e) {
-      console.warn('[NotionFlow] Unable to override userAgentData:', e);
-    }
+    } catch {}
+  };
+
+  // 1. Spoof Navigator properties on Navigator.prototype AND window.navigator
+  // Notion checks userAgent, appVersion, platform, and maxTouchPoints to detect iOS
+  const navTargets = [Navigator.prototype, navigator];
+  for (const t of navTargets) {
+    overrideProp(t, 'userAgent', () => DESKTOP_UA);
+    overrideProp(t, 'appVersion', () => DESKTOP_APP_VERSION);
+    overrideProp(t, 'platform', () => 'MacIntel');
+    overrideProp(t, 'vendor', () => 'Apple Computer, Inc.');
+    // maxTouchPoints: 0 prevents Notion's iPad detection (platform === 'MacIntel' && maxTouchPoints > 1)
+    overrideProp(t, 'maxTouchPoints', () => 0);
+    // Suppress standalone PWA flag so Notion doesn't switch to mobile standalone UI
+    overrideProp(t, 'standalone', () => false);
   }
 
-  // 3. Suppress Notion Mobile Smart App Banner and Deep Linking
+  // 2. Spoof UserAgentData for modern WebKit/Chromium
+  const uad = {
+    brands: [
+      { brand: 'Apple Safari', version: '17.5' },
+      { brand: 'Safari', version: '17.5' },
+      { brand: 'Not-A.Brand', version: '24' }
+    ],
+    mobile: false,
+    platform: 'macOS',
+    getHighEntropyValues: async () => ({
+      architecture: 'arm',
+      model: '',
+      platform: 'macOS',
+      platformVersion: '14.5.0',
+      uaFullVersion: '17.5.0'
+    })
+  };
+  for (const t of navTargets) {
+    overrideProp(t, 'userAgentData', () => uad);
+  }
+
+  // 3. Spoof Screen Dimensions and Window Outer Bounds
+  // Notion checks window.screen.width (< 768) or outerWidth to trigger mobile routes for Settings and Notifications.
+  // Spoofing screen.width to 1440 forces Notion to render the desktop dialogs instead of mobile views.
+  const screenTargets = [Screen.prototype, window.screen];
+  for (const t of screenTargets) {
+    overrideProp(t, 'width', () => 1440);
+    overrideProp(t, 'availWidth', () => 1440);
+    overrideProp(t, 'height', () => 900);
+    overrideProp(t, 'availHeight', () => 900);
+    overrideProp(t, 'colorDepth', () => 24);
+    overrideProp(t, 'pixelDepth', () => 24);
+  }
+
+  overrideProp(window, 'outerWidth', () => 1440);
+  overrideProp(window, 'outerHeight', () => 900);
+  overrideProp(window, 'orientation', () => undefined);
+
+  // 4. Override matchMedia for mouse pointer, hover, and standalone display mode
+  try {
+    const origMatchMedia = window.matchMedia;
+    if (origMatchMedia) {
+      window.matchMedia = function (query: string): MediaQueryList {
+        const mql = origMatchMedia.call(window, query);
+        if (/pointer:\s*coarse/i.test(query) || /hover:\s*none/i.test(query) || /display-mode:\s*standalone/i.test(query)) {
+          return new Proxy(mql, {
+            get(target, prop) {
+              if (prop === 'matches') return false;
+              return (target as any)[prop];
+            }
+          });
+        }
+        if (/pointer:\s*fine/i.test(query) || /hover:\s*hover/i.test(query)) {
+          return new Proxy(mql, {
+            get(target, prop) {
+              if (prop === 'matches') return true;
+              return (target as any)[prop];
+            }
+          });
+        }
+        return mql;
+      };
+    }
+  } catch (e) {
+    console.warn('[NotionFlow] matchMedia override skipped:', e);
+  }
+
+  // 5. Suppress Notion Mobile Smart App Banner and Deep Linking
   const suppressMobileBanners = () => {
     // Remove Apple Smart App Banner
     const appBanner = document.querySelector('meta[name="apple-itunes-app"]');
@@ -77,11 +137,10 @@ export function initSpoofing(): void {
     suppressMobileBanners();
   }
 
-  // 4. Intercept window.open / location changes targeting mobile redirects
+  // 6. Intercept window.open targeting mobile redirects
   const originalOpen = window.open;
   window.open = function (url?: string | URL, target?: string, features?: string): Window | null {
     if (typeof url === 'string') {
-      // Prevent redirect to app store or notion mobile deeplink
       if (url.includes('itunes.apple.com') || url.startsWith('notion://')) {
         console.log('[NotionFlow] Suppressed native app store / deeplink redirect:', url);
         return null;
@@ -90,5 +149,5 @@ export function initSpoofing(): void {
     return originalOpen.call(window, url, target, features);
   };
 
-  console.log('[NotionFlow] Desktop spoofing initialized successfully (MacIntel / Desktop UA)');
+  console.log('[NotionFlow] Full Desktop Spoofing Active (MacIntel, Desktop UA, Screen 1440, Pointer Fine) 🖥️');
 }

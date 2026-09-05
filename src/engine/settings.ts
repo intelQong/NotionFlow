@@ -26,7 +26,7 @@ export class SettingsManager {
       /* ============================================================
          Notion Settings & Members Dialog - Mobile Responsive Engine
          ============================================================ */
-      @media (max-width: 768px) {
+      @media (max-width: 1080px) {
         /* Dialog Container */
         .notion-overlay-container [role="dialog"],
         div[role="dialog"]:has([aria-label*="Settings" i]),
@@ -220,19 +220,70 @@ export class SettingsManager {
     return null;
   }
 
+  public openNotifications(): void {
+    console.log('[NotionFlow] Opening Notion Desktop Notifications / Inbox...');
+    const notifBtn = this.findNotionNotificationsButton();
+    if (notifBtn) {
+      notifBtn.click();
+      return;
+    }
+  }
+
+  public findNotionNotificationsButton(): HTMLElement | null {
+    // 1. By aria-label
+    const byAria = document.querySelector<HTMLElement>(
+      '[role="button"][aria-label*="Updates" i], [role="button"][aria-label*="Inbox" i], [role="button"][aria-label*="Notifications" i]'
+    );
+    if (byAria) return byAria;
+
+    // 2. Query sidebar items for "Inbox" or "Updates"
+    const sidebarItems = document.querySelectorAll<HTMLElement>(
+      '.notion-sidebar-container [role="button"], .notion-sidebar-container div, .notion-sidebar-item'
+    );
+    for (const item of Array.from(sidebarItems)) {
+      const text = item.textContent?.trim() || '';
+      if (/^(inbox|updates|notifications)$/i.test(text) || /updates\s*(&|and)?\s*inbox/i.test(text)) {
+        const clickable = (item.closest('[role="button"]') || item) as HTMLElement;
+        return clickable;
+      }
+    }
+    return null;
+  }
+
   private dispatchShortcut(): boolean {
-    const keyEventInit: KeyboardEventInit = {
+    const target = document.activeElement || document.body;
+
+    // Mac Cmd+, event
+    const evtMac = new KeyboardEvent('keydown', {
       key: ',',
       code: 'Comma',
+      keyCode: 188,
+      which: 188,
       metaKey: true,
+      ctrlKey: false,
+      bubbles: true,
+      cancelable: true,
+    });
+    target.dispatchEvent(evtMac);
+    window.dispatchEvent(evtMac);
+    document.dispatchEvent(evtMac);
+
+    // Windows/Linux Ctrl+, event fallback
+    const evtWin = new KeyboardEvent('keydown', {
+      key: ',',
+      code: 'Comma',
+      keyCode: 188,
+      which: 188,
+      metaKey: false,
       ctrlKey: true,
       bubbles: true,
       cancelable: true,
-    };
+    });
+    target.dispatchEvent(evtWin);
+    window.dispatchEvent(evtWin);
+    document.dispatchEvent(evtWin);
 
-    const evt = new KeyboardEvent('keydown', keyEventInit);
-    const target = document.activeElement || document.body;
-    return target.dispatchEvent(evt);
+    return true;
   }
 
   private observeSettingsDialog(): void {

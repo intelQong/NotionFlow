@@ -2,38 +2,84 @@
 (() => {
   // src/engine/spoof.ts
   function initSpoofing() {
-    try {
-      Object.defineProperty(navigator, "platform", {
-        get: () => "MacIntel",
-        configurable: true
-      });
-    } catch (e) {
-      console.warn("[NotionFlow] Unable to override navigator.platform:", e);
-    }
-    if ("userAgentData" in navigator && navigator.userAgentData) {
+    const DESKTOP_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15";
+    const DESKTOP_APP_VERSION = "5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15";
+    const overrideProp = (target, prop, getter) => {
       try {
-        Object.defineProperty(navigator, "userAgentData", {
-          get: () => ({
-            brands: [
-              { brand: "Google Chrome", version: "124" },
-              { brand: "Chromium", version: "124" },
-              { brand: "Not-A.Brand", version: "24" }
-            ],
-            mobile: false,
-            platform: "macOS",
-            getHighEntropyValues: async () => ({
-              architecture: "arm",
-              model: "",
-              platform: "macOS",
-              platformVersion: "14.5.0",
-              uaFullVersion: "124.0.6367.208"
-            })
-          }),
-          configurable: true
+        Object.defineProperty(target, prop, {
+          get: getter,
+          configurable: true,
+          enumerable: true
         });
-      } catch (e) {
-        console.warn("[NotionFlow] Unable to override userAgentData:", e);
+      } catch {
       }
+    };
+    const navTargets = [Navigator.prototype, navigator];
+    for (const t of navTargets) {
+      overrideProp(t, "userAgent", () => DESKTOP_UA);
+      overrideProp(t, "appVersion", () => DESKTOP_APP_VERSION);
+      overrideProp(t, "platform", () => "MacIntel");
+      overrideProp(t, "vendor", () => "Apple Computer, Inc.");
+      overrideProp(t, "maxTouchPoints", () => 0);
+      overrideProp(t, "standalone", () => false);
+    }
+    const uad = {
+      brands: [
+        { brand: "Apple Safari", version: "17.5" },
+        { brand: "Safari", version: "17.5" },
+        { brand: "Not-A.Brand", version: "24" }
+      ],
+      mobile: false,
+      platform: "macOS",
+      getHighEntropyValues: async () => ({
+        architecture: "arm",
+        model: "",
+        platform: "macOS",
+        platformVersion: "14.5.0",
+        uaFullVersion: "17.5.0"
+      })
+    };
+    for (const t of navTargets) {
+      overrideProp(t, "userAgentData", () => uad);
+    }
+    const screenTargets = [Screen.prototype, window.screen];
+    for (const t of screenTargets) {
+      overrideProp(t, "width", () => 1440);
+      overrideProp(t, "availWidth", () => 1440);
+      overrideProp(t, "height", () => 900);
+      overrideProp(t, "availHeight", () => 900);
+      overrideProp(t, "colorDepth", () => 24);
+      overrideProp(t, "pixelDepth", () => 24);
+    }
+    overrideProp(window, "outerWidth", () => 1440);
+    overrideProp(window, "outerHeight", () => 900);
+    overrideProp(window, "orientation", () => void 0);
+    try {
+      const origMatchMedia = window.matchMedia;
+      if (origMatchMedia) {
+        window.matchMedia = function(query) {
+          const mql = origMatchMedia.call(window, query);
+          if (/pointer:\s*coarse/i.test(query) || /hover:\s*none/i.test(query) || /display-mode:\s*standalone/i.test(query)) {
+            return new Proxy(mql, {
+              get(target, prop) {
+                if (prop === "matches") return false;
+                return target[prop];
+              }
+            });
+          }
+          if (/pointer:\s*fine/i.test(query) || /hover:\s*hover/i.test(query)) {
+            return new Proxy(mql, {
+              get(target, prop) {
+                if (prop === "matches") return true;
+                return target[prop];
+              }
+            });
+          }
+          return mql;
+        };
+      }
+    } catch (e) {
+      console.warn("[NotionFlow] matchMedia override skipped:", e);
     }
     const suppressMobileBanners = () => {
       const appBanner = document.querySelector('meta[name="apple-itunes-app"]');
@@ -74,7 +120,7 @@
       }
       return originalOpen.call(window, url, target, features);
     };
-    console.log("[NotionFlow] Desktop spoofing initialized successfully (MacIntel / Desktop UA)");
+    console.log("[NotionFlow] Full Desktop Spoofing Active (MacIntel, Desktop UA, Screen 1440, Pointer Fine) \u{1F5A5}\uFE0F");
   }
 
   // src/engine/viewport.ts
@@ -1051,7 +1097,7 @@
       /* ============================================================
          Notion Settings & Members Dialog - Mobile Responsive Engine
          ============================================================ */
-      @media (max-width: 768px) {
+      @media (max-width: 1080px) {
         /* Dialog Container */
         .notion-overlay-container [role="dialog"],
         div[role="dialog"]:has([aria-label*="Settings" i]),
@@ -1226,18 +1272,60 @@
       }
       return null;
     }
+    openNotifications() {
+      console.log("[NotionFlow] Opening Notion Desktop Notifications / Inbox...");
+      const notifBtn = this.findNotionNotificationsButton();
+      if (notifBtn) {
+        notifBtn.click();
+        return;
+      }
+    }
+    findNotionNotificationsButton() {
+      const byAria = document.querySelector(
+        '[role="button"][aria-label*="Updates" i], [role="button"][aria-label*="Inbox" i], [role="button"][aria-label*="Notifications" i]'
+      );
+      if (byAria) return byAria;
+      const sidebarItems = document.querySelectorAll(
+        '.notion-sidebar-container [role="button"], .notion-sidebar-container div, .notion-sidebar-item'
+      );
+      for (const item of Array.from(sidebarItems)) {
+        const text = item.textContent?.trim() || "";
+        if (/^(inbox|updates|notifications)$/i.test(text) || /updates\s*(&|and)?\s*inbox/i.test(text)) {
+          const clickable = item.closest('[role="button"]') || item;
+          return clickable;
+        }
+      }
+      return null;
+    }
     dispatchShortcut() {
-      const keyEventInit = {
+      const target = document.activeElement || document.body;
+      const evtMac = new KeyboardEvent("keydown", {
         key: ",",
         code: "Comma",
+        keyCode: 188,
+        which: 188,
         metaKey: true,
+        ctrlKey: false,
+        bubbles: true,
+        cancelable: true
+      });
+      target.dispatchEvent(evtMac);
+      window.dispatchEvent(evtMac);
+      document.dispatchEvent(evtMac);
+      const evtWin = new KeyboardEvent("keydown", {
+        key: ",",
+        code: "Comma",
+        keyCode: 188,
+        which: 188,
+        metaKey: false,
         ctrlKey: true,
         bubbles: true,
         cancelable: true
-      };
-      const evt = new KeyboardEvent("keydown", keyEventInit);
-      const target = document.activeElement || document.body;
-      return target.dispatchEvent(evt);
+      });
+      target.dispatchEvent(evtWin);
+      window.dispatchEvent(evtWin);
+      document.dispatchEvent(evtWin);
+      return true;
     }
     observeSettingsDialog() {
       const observer = new MutationObserver(() => {
@@ -1268,7 +1356,7 @@
   };
 
   // src/engine/updater.ts
-  var NOTIONFLOW_VERSION = "1.2.0";
+  var NOTIONFLOW_VERSION = "1.3.0";
   var NOTIONFLOW_RAW_URL = "https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js";
   var UpdateChecker = class {
     lastCheckKey = "notionflow_last_update_check";
@@ -1648,6 +1736,11 @@
             Full Settings & Members
           </button>
 
+          <button id="notionflow-popover-open-inbox" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #e0e0e0; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s; margin-top: 5px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Notifications & Inbox
+          </button>
+
           <div style="height: 1px; background: rgba(255, 255, 255, 0.08); margin: 2px 0;"></div>
 
           <!-- Version & Update status -->
@@ -1711,6 +1804,11 @@
         this.zoomMenuOpen = false;
         zoomMenu?.classList.remove("visible");
         this.settings.openFullSettings();
+      });
+      this.container?.querySelector("#notionflow-popover-open-inbox")?.addEventListener("click", () => {
+        this.zoomMenuOpen = false;
+        zoomMenu?.classList.remove("visible");
+        this.settings.openNotifications();
       });
       const checkBtn = this.container?.querySelector("#notionflow-btn-check-update");
       checkBtn?.addEventListener("click", async () => {
