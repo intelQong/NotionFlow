@@ -15,6 +15,7 @@
 <p align="center">
   <a href="#-the-problem-vs-notionflow">Why NotionFlow?</a> •
   <a href="#-quick-install-60-seconds--zero-mac-required">60s Safari Install</a> •
+  <a href="#-distribution-files-which-one-should-you-use">Which File to Use?</a> •
   <a href="#-how-to-add-to-your-iphone--ipad-home-screen">Add to Home Screen</a> •
   <a href="#-superpowers">Superpowers</a> •
   <a href="#-local-interactive-simulator">Simulator</a> •
@@ -75,6 +76,21 @@ Choose either quick method:
 ### Step 4: Open Notion in Safari
 1. Open [**`https://app.notion.com`**](https://app.notion.com) (or [`https://www.notion.so`](https://www.notion.so)) in Safari on your iPhone or iPad.
 2. Notion will automatically load in **full desktop mode** with NotionFlow's touch engine active (snap carousels, sticky headers, touch handles, floating toolbars, and full settings access).
+
+---
+
+## 📦 Distribution Files: Which One Should You Use?
+
+NotionFlow produces two build artifacts in [`dist/`](dist) and in every [GitHub Release](https://github.com/intelQong/NotionFlow/releases):
+
+| File | Format | Description & Compatibility |
+| :--- | :--- | :--- |
+| **[`notion-flow.user.js`](https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js)** | Userscript Bundle <br>*(Includes `// ==UserScript==` header)* | **For Safari Extension Managers & Userscript Apps:**<br>• [Userscripts Safari Extension](https://apps.apple.com/app/userscripts/id1463298887) (iOS / iPadOS / macOS)<br>• Stay for Safari<br>• Orion Browser<br>• Tampermonkey / Violentmonkey |
+| **[`notionflow-injection.js`](https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notionflow-injection.js)** | Pure Raw JavaScript <br>*(Zero metadata comment block)* | **For Native iOS Apps & Direct Injections:**<br>• Native Swift / Xcode `WKWebView` via `WKUserScript`<br>• Safari Web Extensions (`content_scripts`)<br>• iOS Shortcuts ("Run JavaScript on Web Page")<br>• Custom WebView wrappers |
+
+### 💡 Which One Should You Use?
+* **If you are installing NotionFlow via the Userscripts extension in Safari on iOS:** Use **`notion-flow.user.js`**.
+* **If you are embedding NotionFlow into a native iOS app, custom wrapper, or Safari Web Extension:** Use **`notionflow-injection.js`**.
 
 ---
 
@@ -208,7 +224,8 @@ NotionFlow/
 │   └── userscript/
 │       └── notion-flow.user.ts  # Userscript entry point
 └── dist/
-    └── notion-flow.user.js      # Compiled standalone userscript
+    ├── notion-flow.user.js      # Compiled standalone userscript (with metadata)
+    └── notionflow-injection.js  # Pure raw JS bundle (for WKWebView / extensions)
 ```
 
 ---
