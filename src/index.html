@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>NotionFlow - iOS Desktop Wrapper</title>
+  <link rel="stylesheet" href="./ui/styles/notion-mobile.css" />
+  <style>
+    /* Dark Theme Core Styles for Notion Sandbox */
+    :root {
+      --theme--bg: #191919;
+      --theme--text: rgba(255, 255, 255, 0.9);
+      --theme--sidebar-bg: #202020;
+      --theme--card-bg: rgba(255, 255, 255, 0.05);
+      --theme--border: rgba(255, 255, 255, 0.09);
+    }
+
+    body {
+      background-color: #0a0a0c;
+      color: var(--theme--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif;
+    }
+
+    /* Notion Topbar */
+    .notion-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 45px;
+      padding: 0 16px;
+      background: #191919;
+      border-bottom: 1px solid var(--theme--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .notion-topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #999;
+    }
+
+    .notion-topbar-title {
+      color: #fff;
+      font-weight: 500;
+    }
+
+    /* Notion Sidebar */
+    .notion-sidebar-container {
+      background: var(--theme--sidebar-bg);
+      display: none; /* Controlled by drawer manager */
+      flex-direction: column;
+      padding: 18px 14px;
+      color: #ddd;
+    }
+
+    .notion-sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 20px;
+    }
+
+    .notion-sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-bottom: 2px;
+    }
+
+    .notion-sidebar-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    /* Page Content */
+    .notion-frame {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      background: var(--theme--bg);
+      min-height: 100%;
+    }
+
+    .notion-page-cover {
+      height: 140px;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      width: 100%;
+    }
+
+    .notion-page-icon {
+      font-size: 42px;
+      margin-top: -24px;
+      margin-left: 20px;
+      margin-bottom: 10px;
+    }
+
+    .notion-header-block {
+      font-size: 26px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 16px;
+      outline: none;
+    }
+
+    /* Multi-Column List */
+    .notion-column_list-block {
+      display: flex;
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .notion-column-block {
+      flex: 1;
+      background: var(--theme--card-bg);
+      border: 1px solid var(--theme--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    .notion-column-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #58a6ff;
+    }
+
+    /* Editable Block */
+    [data-block-id] {
+      padding: 4px 6px;
+      border-radius: 4px;
+      margin: 3px 0;
+      font-size: 14px;
+      line-height: 1.5;
+      outline: none;
+    }
+
+    /* Database Table View */
+    .notion-collection_view-block {
+      margin-top: 24px;
+      border: 1px solid var(--theme--border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--theme--bg);
+    }
+
+    .notion-collection-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid var(--theme--border);
+    }
+
+    .notion-collection-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .notion-table-view {
+      overflow-x: auto;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .notion-table-row {
+      display: flex;
+      border-bottom: 1px solid var(--theme--border);
+      min-width: 600px;
+    }
+
+    .notion-table-view-header-cell,
+    .notion-table-view-cell {
+      padding: 8px 12px;
+      font-size: 13px;
+      border-right: 1px solid var(--theme--border);
+      display: flex;
+      align-items: center;
+      box-sizing: border-box;
+      background: var(--theme--bg);
+    }
+
+    .notion-table-view-header-cell {
+      font-weight: 600;
+      color: #888;
+      background: #1e1e1e;
+    }
+
+    .col-title { width: 180px; }
+    .col-status { width: 110px; }
+    .col-priority { width: 100px; }
+    .col-date { width: 110px; }
+    .col-estimate { width: 100px; }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-done { background: rgba(46, 160, 67, 0.2); color: #3fb950; }
+    .badge-progress { background: rgba(56, 139, 253, 0.2); color: #58a6ff; }
+    .badge-high { background: rgba(218, 54, 51, 0.2); color: #f85149; }
+  </style>
+</head>
+<body>
+  <div class="notionflow-sim-stage">
+    <!-- iPhone Device Frame Bezel -->
+    <div class="notionflow-device-bezel iphone-16-pro">
+      <!-- Dynamic Island -->
+      <div class="notionflow-dynamic-island">
+        <span style="font-size: 11px; font-weight: 600; color: #fff;">18:45</span>
+        <div class="notionflow-dynamic-island-camera"></div>
+        <div style="display: flex; gap: 4px; align-items: center;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 18.25C3.52 17.06 3 15.6 3 14c0-4.97 4.03-9 9-9s9 4.03 9 9c0 1.6-.52 3.06-1.35 4.25l-.62-.64C20.26 16.07 21 14.12 21 12c0-4.97-4.03-9-9-9z"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><rect width="18" height="10" x="2" y="7" rx="2"/><path d="M22 11v2"/></svg>
+        </div>
+      </div>
+
+      <!-- iPhone Screen Content -->
+      <div class="notionflow-device-screen">
+        <div class="notion-app-inner">
+          <!-- Notion Topbar -->
+          <div class="notion-topbar">
+            <div class="notion-topbar-left">
+              <div role="button" aria-label="Toggle sidebar" style="cursor: pointer;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+              </div>
+              <span>Workspace /</span>
+              <span class="notion-topbar-title">⚡ Daily Life OS</span>
+            </div>
+          </div>
+
+          <!-- Off-Canvas Sidebar Container -->
+          <div class="notion-sidebar-container">
+            <div class="notion-sidebar-header">
+              <span>intelQong's Notion</span>
+              <span style="color: #888; font-size: 13px;">Pro</span>
+            </div>
+            <div class="notion-sidebar-item">🔍 Quick Search</div>
+            <div class="notion-sidebar-item">⚡ All Updates</div>
+            <div class="notion-sidebar-item">⚙️ Settings & Members</div>
+            <div style="height: 1px; background: rgba(255,255,255,0.08); margin: 12px 0;"></div>
+            <div style="font-size: 12px; color: #888; font-weight: 600; margin-bottom: 6px;">FAVORITES</div>
+            <div class="notion-sidebar-item">⚡ Daily Life OS</div>
+            <div class="notion-sidebar-item">🎯 Q3 Objectives & Roadmap</div>
+            <div class="notion-sidebar-item">📚 Knowledge Vault</div>
+          </div>
+
+          <!-- Main Page Frame -->
+          <div class="notion-frame">
+            <div class="notion-page-cover"></div>
+            <div class="notion-page-icon">⚡</div>
+
+            <div class="notion-page-content">
+              <div class="notion-header-block" contenteditable="true" data-block-id="hdr-1">
+                Daily Life OS & Command Center
+              </div>
+
+              <!-- Text block -->
+              <div data-block-id="text-1" contenteditable="true">
+                Welcome to your desktop-class Notion workspace, optimized dynamically with snap carousels and frozen table headers for iPhone.
+              </div>
+
+              <!-- Multi-Column Dashboard (Transformed by Carousel Manager) -->
+              <div class="notion-column_list-block" style="display: flex;">
+                <!-- Column 1 -->
+                <div class="notion-column-block" data-block-id="col-1">
+                  <div class="notion-column-title">🔥 Today's Focus</div>
+                  <div data-block-id="todo-1" class="notion-to_do-block" style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" checked />
+                    <span contenteditable="true">Review mobile wrapper architecture</span>
+                  </div>
+                  <div data-block-id="todo-2" class="notion-to_do-block" style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" />
+                    <span contenteditable="true">Verify multi-column snap carousel</span>
+                  </div>
+                  <div data-block-id="todo-3" class="notion-to_do-block" style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" />
+                    <span contenteditable="true">Test database sticky headers</span>
+                  </div>
+                </div>
+
+                <!-- Column 2 -->
+                <div class="notion-column-block" data-block-id="col-2">
+                  <div class="notion-column-title" style="color: #a371f7;">🚀 Projects in Flight</div>
+                  <div data-block-id="item-2a" contenteditable="true">
+                    • <b>NotionFlow iOS</b>: Injected engine & WKWebView
+                  </div>
+                  <div data-block-id="item-2b" contenteditable="true">
+                    • <b>Airtable Sync</b>: Background integration
+                  </div>
+                  <div data-block-id="item-2c" contenteditable="true">
+                    • <b>Design System 2.0</b>: High-contrast tokens
+                  </div>
+                </div>
+
+                <!-- Column 3 -->
+                <div class="notion-column-block" data-block-id="col-3">
+                  <div class="notion-column-title" style="color: #3fb950;">💡 Quick Notes</div>
+                  <div data-block-id="item-3a" contenteditable="true">
+                    Desktop layout gives full formula editing & unfiltered relations.
+                  </div>
+                  <div data-block-id="item-3b" contenteditable="true">
+                    Tap any block to reveal mobile touch handles!
+                  </div>
+                </div>
+              </div>
+
+              <!-- Database Table View -->
+              <div class="notion-collection_view-block">
+                <div class="notion-collection-header">
+                  <div class="notion-collection-title">📋 Active Sprints Database</div>
+                </div>
+                <div class="notion-table-view">
+                  <div class="notion-table-row">
+                    <div class="notion-table-view-header-cell col-title" data-col-index="0">Task Item</div>
+                    <div class="notion-table-view-header-cell col-status">Status</div>
+                    <div class="notion-table-view-header-cell col-priority">Priority</div>
+                    <div class="notion-table-view-header-cell col-date">Due Date</div>
+                    <div class="notion-table-view-header-cell col-estimate">Effort</div>
+                  </div>
+                  <div class="notion-table-row" data-block-id="row-1">
+                    <div class="notion-table-view-cell col-title" data-col-index="0" contenteditable="true">Implement Desktop Spoofing</div>
+                    <div class="notion-table-view-cell col-status"><span class="badge badge-done">Done</span></div>
+                    <div class="notion-table-view-cell col-priority"><span class="badge badge-high">P0</span></div>
+                    <div class="notion-table-view-cell col-date">Today</div>
+                    <div class="notion-table-view-cell col-estimate">2h</div>
+                  </div>
+                  <div class="notion-table-row" data-block-id="row-2">
+                    <div class="notion-table-view-cell col-title" data-col-index="0" contenteditable="true">Horizontal Column Carousel</div>
+                    <div class="notion-table-view-cell col-status"><span class="badge badge-progress">Active</span></div>
+                    <div class="notion-table-view-cell col-priority"><span class="badge badge-high">P0</span></div>
+                    <div class="notion-table-view-cell col-date">Tomorrow</div>
+                    <div class="notion-table-view-cell col-estimate">3h</div>
+                  </div>
+                  <div class="notion-table-row" data-block-id="row-3">
+                    <div class="notion-table-view-cell col-title" data-col-index="0" contenteditable="true">Sticky DB Header Columns</div>
+                    <div class="notion-table-view-cell col-status"><span class="badge badge-progress">Active</span></div>
+                    <div class="notion-table-view-cell col-priority">P1</div>
+                    <div class="notion-table-view-cell col-date">Sep 08</div>
+                    <div class="notion-table-view-cell col-estimate">1.5h</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Home Indicator -->
+      <div class="notionflow-home-bar"></div>
+    </div>
+  </div>
+
+  <script type="module" src="./app.ts"></script>
+</body>
+</html>
