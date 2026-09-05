@@ -36,6 +36,47 @@
     setTimeout(onReady, 0);
     setTimeout(onReady, 50);
   }
+  var trustedPolicy = void 0;
+  function getPolicy() {
+    if (trustedPolicy !== void 0) return trustedPolicy;
+    try {
+      if (typeof window !== "undefined" && window.trustedTypes?.createPolicy) {
+        trustedPolicy = window.trustedTypes.createPolicy("notionflow-policy", {
+          createHTML: (s) => s
+        });
+        return trustedPolicy;
+      }
+    } catch {
+      try {
+        trustedPolicy = window.trustedTypes?.defaultPolicy || null;
+        return trustedPolicy;
+      } catch {
+        trustedPolicy = null;
+      }
+    }
+    trustedPolicy = null;
+    return trustedPolicy;
+  }
+  function safeSetHTML(element, html) {
+    try {
+      const policy = getPolicy();
+      if (policy && typeof policy.createHTML === "function") {
+        element.innerHTML = policy.createHTML(html);
+        return;
+      }
+    } catch {
+    }
+    try {
+      element.innerHTML = html;
+    } catch {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        element.replaceChildren(...Array.from(doc.body.childNodes));
+      } catch {
+      }
+    }
+  }
 
   // src/engine/spoof.ts
   function initSpoofing() {
@@ -136,10 +177,16 @@
       console.warn("[NotionFlow] ontouchend neutralization error:", e);
     }
     try {
-      window.CONFIG_OVERRIDE = Object.assign(window.CONFIG_OVERRIDE || {}, {
-        isMobile: false
-      });
+      if (window.CONFIG_OVERRIDE && !window.CONFIG_OVERRIDE.env) {
+        delete window.CONFIG_OVERRIDE;
+      }
       let configVal = window.CONFIG;
+      if (configVal && typeof configVal === "object") {
+        try {
+          configVal.isMobile = false;
+        } catch {
+        }
+      }
       Object.defineProperty(window, "CONFIG", {
         get: () => configVal,
         set: (val) => {
@@ -149,7 +196,7 @@
                 get: () => false,
                 set: () => {
                 },
-                configurable: false,
+                configurable: true,
                 enumerable: true
               });
             } catch {
@@ -595,12 +642,15 @@
       const header = dbContainer.querySelector('.notion-collection-view-tabs, [role="tablist"]') || dbContainer;
       const focusBtn = document.createElement("button");
       focusBtn.className = "notionflow-db-focus-btn";
-      focusBtn.innerHTML = `
+      safeSetHTML(
+        focusBtn,
+        `
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
       </svg>
       Focus View
-    `;
+    `
+      );
       focusBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         this.toggleDatabaseFocus(dbContainer);
@@ -619,7 +669,7 @@
         this.isFocusModeActive = true;
         const closeBtn = document.createElement("button");
         closeBtn.className = "notionflow-db-close-btn";
-        closeBtn.innerHTML = "\u2715 Exit Focus";
+        closeBtn.textContent = "\u2715 Exit Focus";
         closeBtn.addEventListener("click", () => this.toggleDatabaseFocus());
         safeAppendBody(closeBtn);
       }
@@ -741,7 +791,9 @@
       if (this.actionPopup) return;
       this.actionPopup = document.createElement("div");
       this.actionPopup.className = "notionflow-block-actions";
-      this.actionPopup.innerHTML = `
+      safeSetHTML(
+        this.actionPopup,
+        `
       <button class="notionflow-block-btn" data-action="add" title="Add block below">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
         Add
@@ -753,7 +805,8 @@
       <button class="notionflow-block-btn danger" data-action="delete" title="Delete block">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
       </button>
-    `;
+    `
+      );
       this.actionPopup.addEventListener("click", (e) => {
         e.stopPropagation();
         const target = e.target.closest("[data-action]");
@@ -1464,7 +1517,7 @@
   };
 
   // src/engine/updater.ts
-  var NOTIONFLOW_VERSION = "1.3.1";
+  var NOTIONFLOW_VERSION = "1.3.2";
   var NOTIONFLOW_RAW_URL = "https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js";
   var UpdateChecker = class {
     lastCheckKey = "notionflow_last_update_check";
@@ -1558,16 +1611,37 @@
         return { hasUpdate: false };
       }
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5e3);
-        const response = await fetch(`${NOTIONFLOW_RAW_URL}?t=${now}`, {
-          cache: "no-cache",
-          headers: { "Accept": "text/plain" },
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        if (!response.ok) return { hasUpdate: false };
-        const scriptText = await response.text();
+        let scriptText = "";
+        const gmxhr = typeof window.GM_xmlhttpRequest === "function" ? window.GM_xmlhttpRequest : typeof window.GM?.xmlHttpRequest === "function" ? window.GM.xmlHttpRequest : null;
+        if (gmxhr) {
+          scriptText = await new Promise((resolve, reject) => {
+            gmxhr({
+              method: "GET",
+              url: `${NOTIONFLOW_RAW_URL}?t=${now}`,
+              timeout: 5e3,
+              onload: (res) => {
+                if (res.status >= 200 && res.status < 300) {
+                  resolve(res.responseText);
+                } else {
+                  reject(new Error(`Status ${res.status}`));
+                }
+              },
+              ontimeout: () => reject(new Error("Timeout")),
+              onerror: (err) => reject(err)
+            });
+          });
+        } else {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5e3);
+          const response = await fetch(`${NOTIONFLOW_RAW_URL}?t=${now}`, {
+            cache: "no-cache",
+            headers: { Accept: "text/plain" },
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          if (!response.ok) return { hasUpdate: false };
+          scriptText = await response.text();
+        }
         localStorage.setItem(this.lastCheckKey, now.toString());
         const match = scriptText.match(/\/\/\s*@version\s+([0-9.]+)/i);
         if (match && match[1]) {
@@ -1577,8 +1651,7 @@
             return { hasUpdate: true, latestVersion };
           }
         }
-      } catch (e) {
-        console.warn("[NotionFlow] Auto-update check skipped:", e);
+      } catch {
       }
       return { hasUpdate: false };
     }
@@ -1598,7 +1671,9 @@
       const banner = document.createElement("div");
       banner.id = "notionflow-update-banner";
       banner.className = "notionflow-update-banner";
-      banner.innerHTML = `
+      safeSetHTML(
+        banner,
+        `
       <div style="font-size: 18px;">\u{1F680}</div>
       <div class="notionflow-update-text">
         <div><strong>NotionFlow v${newVersion}</strong> is available!</div>
@@ -1606,7 +1681,8 @@
       </div>
       <a class="notionflow-update-btn" href="${NOTIONFLOW_RAW_URL}" target="_blank">Update</a>
       <button class="notionflow-update-dismiss" id="notionflow-dismiss-update">\u2715</button>
-    `;
+    `
+      );
       safeAppendBody(banner);
       requestAnimationFrame(() => {
         banner.classList.add("visible");
@@ -1790,7 +1866,9 @@
       this.container = document.createElement("div");
       this.container.id = "notionflow-fab-container";
       this.container.className = "notionflow-fab-container";
-      this.container.innerHTML = `
+      safeSetHTML(
+        this.container,
+        `
       <!-- Sidebar Toggle -->
       <button class="notionflow-fab-btn" id="notionflow-btn-sidebar" title="Toggle Sidebar (Cmd+\\)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
@@ -1875,7 +1953,8 @@
       <button class="notionflow-fab-btn" id="notionflow-btn-collapse" title="Minimize Bar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
       </button>
-    `;
+    `
+      );
       this.attachEventListeners();
       safeAppendBody(this.container);
     }
@@ -1966,6 +2045,9 @@
   // src/userscript/notion-flow.user.ts
   (function() {
     "use strict";
+    if (window.self !== window.top) {
+      return;
+    }
     console.log("[NotionFlow Userscript] Initializing on Notion Desktop...");
     initSpoofing();
     const boot = () => {

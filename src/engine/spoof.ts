@@ -125,13 +125,22 @@ export function initSpoofing(): void {
   }
 
   // 6. Intercept Notion's module 386961 global CONFIG
-  // Locks window.CONFIG.isMobile to false so Notion's route parser and sidebar load in desktop mode.
+  // Ensure window.CONFIG.isMobile is locked to false without clobbering Notion's configuration.
+  // CRITICAL: NEVER set window.CONFIG_OVERRIDE to a partial object! Notion treats CONFIG_OVERRIDE
+  // as a complete configuration replacement; setting a partial object wipes out Notion's
+  // imageProxy, proxyServiceHosts, and asset URLs, crashing React with ReferenceError during boot.
   try {
-    (window as any).CONFIG_OVERRIDE = Object.assign((window as any).CONFIG_OVERRIDE || {}, {
-      isMobile: false
-    });
+    if ((window as any).CONFIG_OVERRIDE && !(window as any).CONFIG_OVERRIDE.env) {
+      delete (window as any).CONFIG_OVERRIDE;
+    }
 
     let configVal: any = (window as any).CONFIG;
+    if (configVal && typeof configVal === 'object') {
+      try {
+        configVal.isMobile = false;
+      } catch {}
+    }
+
     Object.defineProperty(window, 'CONFIG', {
       get: () => configVal,
       set: (val) => {
@@ -140,7 +149,7 @@ export function initSpoofing(): void {
             Object.defineProperty(val, 'isMobile', {
               get: () => false,
               set: () => {},
-              configurable: false,
+              configurable: true,
               enumerable: true
             });
           } catch {

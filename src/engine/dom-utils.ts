@@ -40,3 +40,46 @@ export function safeAppendBody(element: HTMLElement): void {
   setTimeout(onReady, 0);
   setTimeout(onReady, 50);
 }
+
+let trustedPolicy: any = undefined;
+
+function getPolicy(): any {
+  if (trustedPolicy !== undefined) return trustedPolicy;
+  try {
+    if (typeof window !== 'undefined' && (window as any).trustedTypes?.createPolicy) {
+      trustedPolicy = (window as any).trustedTypes.createPolicy('notionflow-policy', {
+        createHTML: (s: string) => s
+      });
+      return trustedPolicy;
+    }
+  } catch {
+    try {
+      trustedPolicy = (window as any).trustedTypes?.defaultPolicy || null;
+      return trustedPolicy;
+    } catch {
+      trustedPolicy = null;
+    }
+  }
+  trustedPolicy = null;
+  return trustedPolicy;
+}
+
+export function safeSetHTML(element: HTMLElement, html: string): void {
+  try {
+    const policy = getPolicy();
+    if (policy && typeof policy.createHTML === 'function') {
+      element.innerHTML = policy.createHTML(html);
+      return;
+    }
+  } catch {}
+
+  try {
+    element.innerHTML = html;
+  } catch {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      element.replaceChildren(...Array.from(doc.body.childNodes));
+    } catch {}
+  }
+}

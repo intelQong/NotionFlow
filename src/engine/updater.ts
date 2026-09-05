@@ -4,10 +4,10 @@
  * and alerts the user with 1-tap update installation.
  */
 
-export const NOTIONFLOW_VERSION = '1.3.1';
+export const NOTIONFLOW_VERSION = '1.3.2';
 export const NOTIONFLOW_RAW_URL = 'https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js';
 
-import { safeAppend, safeAppendBody } from './dom-utils';
+import { safeAppend, safeAppendBody, safeSetHTML } from './dom-utils';
 
 export class UpdateChecker {
   private lastCheckKey = 'notionflow_last_update_check';
@@ -108,18 +108,45 @@ export class UpdateChecker {
     }
 
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      const response = await fetch(`${NOTIONFLOW_RAW_URL}?t=${now}`, {
-        cache: 'no-cache',
-        headers: { 'Accept': 'text/plain' },
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
+      let scriptText = '';
+      const gmxhr =
+        typeof (window as any).GM_xmlhttpRequest === 'function'
+          ? (window as any).GM_xmlhttpRequest
+          : typeof (window as any).GM?.xmlHttpRequest === 'function'
+          ? (window as any).GM.xmlHttpRequest
+          : null;
 
-      if (!response.ok) return { hasUpdate: false };
+      if (gmxhr) {
+        scriptText = await new Promise<string>((resolve, reject) => {
+          gmxhr({
+            method: 'GET',
+            url: `${NOTIONFLOW_RAW_URL}?t=${now}`,
+            timeout: 5000,
+            onload: (res: any) => {
+              if (res.status >= 200 && res.status < 300) {
+                resolve(res.responseText);
+              } else {
+                reject(new Error(`Status ${res.status}`));
+              }
+            },
+            ontimeout: () => reject(new Error('Timeout')),
+            onerror: (err: any) => reject(err)
+          });
+        });
+      } else {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const response = await fetch(`${NOTIONFLOW_RAW_URL}?t=${now}`, {
+          cache: 'no-cache',
+          headers: { Accept: 'text/plain' },
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
 
-      const scriptText = await response.text();
+        if (!response.ok) return { hasUpdate: false };
+        scriptText = await response.text();
+      }
+
       localStorage.setItem(this.lastCheckKey, now.toString());
 
       const match = scriptText.match(/\/\/\s*@version\s+([0-9.]+)/i);
@@ -130,8 +157,8 @@ export class UpdateChecker {
           return { hasUpdate: true, latestVersion };
         }
       }
-    } catch (e) {
-      console.warn('[NotionFlow] Auto-update check skipped:', e);
+    } catch {
+      // In sandboxed environments or if page CSP restricts direct fetch, silently skip
     }
 
     return { hasUpdate: false };
@@ -155,7 +182,9 @@ export class UpdateChecker {
     const banner = document.createElement('div');
     banner.id = 'notionflow-update-banner';
     banner.className = 'notionflow-update-banner';
-    banner.innerHTML = `
+    safeSetHTML(
+      banner,
+      `
       <div style="font-size: 18px;">🚀</div>
       <div class="notionflow-update-text">
         <div><strong>NotionFlow v${newVersion}</strong> is available!</div>
@@ -163,7 +192,8 @@ export class UpdateChecker {
       </div>
       <a class="notionflow-update-btn" href="${NOTIONFLOW_RAW_URL}" target="_blank">Update</a>
       <button class="notionflow-update-dismiss" id="notionflow-dismiss-update">✕</button>
-    `;
+    `
+    );
 
     safeAppendBody(banner);
 

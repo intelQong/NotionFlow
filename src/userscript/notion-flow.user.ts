@@ -18,6 +18,11 @@ import { FloatingBar } from '../ui/floating-bar';
 (function () {
   'use strict';
 
+  // Only run in top-level window; do not inject into third-party auth iframes (Google One Tap, Stripe, etc.)
+  if (window.self !== window.top) {
+    return;
+  }
+
   console.log('[NotionFlow Userscript] Initializing on Notion Desktop...');
 
   // 1. Spoof environment immediately

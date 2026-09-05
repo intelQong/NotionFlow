@@ -9,7 +9,7 @@ import { SidebarDrawerManager } from '../engine/sidebar-drawer';
 import { ColumnsCarouselManager } from '../engine/columns-carousel';
 import { SettingsManager } from '../engine/settings';
 import { UpdateChecker, NOTIONFLOW_VERSION } from '../engine/updater';
-import { safeAppend, safeAppendBody } from '../engine/dom-utils';
+import { safeAppend, safeAppendBody, safeSetHTML } from '../engine/dom-utils';
 
 export class FloatingBar {
   private container: HTMLElement | null = null;
@@ -190,7 +190,9 @@ export class FloatingBar {
     this.container.id = 'notionflow-fab-container';
     this.container.className = 'notionflow-fab-container';
 
-    this.container.innerHTML = `
+    safeSetHTML(
+      this.container,
+      `
       <!-- Sidebar Toggle -->
       <button class="notionflow-fab-btn" id="notionflow-btn-sidebar" title="Toggle Sidebar (Cmd+\\)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
@@ -275,7 +277,8 @@ export class FloatingBar {
       <button class="notionflow-fab-btn" id="notionflow-btn-collapse" title="Minimize Bar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
       </button>
-    `;
+    `
+    );
 
     this.attachEventListeners();
     safeAppendBody(this.container);

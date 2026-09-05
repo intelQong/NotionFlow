@@ -4,7 +4,7 @@
  * and smooth touch scrolling for Notion table and board views.
  */
 
-import { safeAppend, safeAppendBody } from './dom-utils';
+import { safeAppend, safeAppendBody, safeSetHTML } from './dom-utils';
 
 export class DatabaseEnhancer {
   private isFocusModeActive: boolean = false;
@@ -122,12 +122,15 @@ export class DatabaseEnhancer {
     
     const focusBtn = document.createElement('button');
     focusBtn.className = 'notionflow-db-focus-btn';
-    focusBtn.innerHTML = `
+    safeSetHTML(
+      focusBtn,
+      `
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
       </svg>
       Focus View
-    `;
+    `
+    );
 
     focusBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -152,7 +155,7 @@ export class DatabaseEnhancer {
 
       const closeBtn = document.createElement('button');
       closeBtn.className = 'notionflow-db-close-btn';
-      closeBtn.innerHTML = '✕ Exit Focus';
+      closeBtn.textContent = '✕ Exit Focus';
       closeBtn.addEventListener('click', () => this.toggleDatabaseFocus());
       safeAppendBody(closeBtn);
     }

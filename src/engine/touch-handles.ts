@@ -4,7 +4,7 @@
  * and provides one-tap access to Notion block actions (+ and :: handles).
  */
 
-import { safeAppend, safeAppendBody } from './dom-utils';
+import { safeAppend, safeAppendBody, safeSetHTML } from './dom-utils';
 
 export class TouchHandlesManager {
   private activeBlock: HTMLElement | null = null;
@@ -111,7 +111,9 @@ export class TouchHandlesManager {
 
     this.actionPopup = document.createElement('div');
     this.actionPopup.className = 'notionflow-block-actions';
-    this.actionPopup.innerHTML = `
+    safeSetHTML(
+      this.actionPopup,
+      `
       <button class="notionflow-block-btn" data-action="add" title="Add block below">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
         Add
@@ -123,7 +125,8 @@ export class TouchHandlesManager {
       <button class="notionflow-block-btn danger" data-action="delete" title="Delete block">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
       </button>
-    `;
+    `
+    );
 
     this.actionPopup.addEventListener('click', (e) => {
       e.stopPropagation();
