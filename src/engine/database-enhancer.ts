@@ -4,6 +4,8 @@
  * and smooth touch scrolling for Notion table and board views.
  */
 
+import { safeAppend, safeAppendBody } from './dom-utils';
+
 export class DatabaseEnhancer {
   private isFocusModeActive: boolean = false;
   private currentFocusedDB: HTMLElement | null = null;
@@ -103,7 +105,7 @@ export class DatabaseEnhancer {
         cursor: pointer;
       }
     `;
-    document.head.appendChild(style);
+    safeAppend(style);
     document.documentElement.classList.add('notionflow-sticky-col-enabled');
   }
 
@@ -152,13 +154,19 @@ export class DatabaseEnhancer {
       closeBtn.className = 'notionflow-db-close-btn';
       closeBtn.innerHTML = '✕ Exit Focus';
       closeBtn.addEventListener('click', () => this.toggleDatabaseFocus());
-      document.body.appendChild(closeBtn);
+      safeAppendBody(closeBtn);
     }
   }
 
   private observeMutations(): void {
+    let checkQueued = false;
     this.observer = new MutationObserver(() => {
-      this.enhanceTables();
+      if (checkQueued) return;
+      checkQueued = true;
+      requestAnimationFrame(() => {
+        checkQueued = false;
+        this.enhanceTables();
+      });
     });
 
     this.observer.observe(document.body || document.documentElement, {

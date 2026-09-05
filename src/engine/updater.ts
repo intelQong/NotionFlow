@@ -4,8 +4,10 @@
  * and alerts the user with 1-tap update installation.
  */
 
-export const NOTIONFLOW_VERSION = '1.3.0';
+export const NOTIONFLOW_VERSION = '1.3.1';
 export const NOTIONFLOW_RAW_URL = 'https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js';
+
+import { safeAppend, safeAppendBody } from './dom-utils';
 
 export class UpdateChecker {
   private lastCheckKey = 'notionflow_last_update_check';
@@ -94,7 +96,7 @@ export class UpdateChecker {
         justify-content: center;
       }
     `;
-    document.head.appendChild(style);
+    safeAppend(style);
   }
 
   public async check(force: boolean = false): Promise<{ hasUpdate: boolean; latestVersion?: string }> {
@@ -106,11 +108,14 @@ export class UpdateChecker {
     }
 
     try {
-      // Add timestamp to prevent aggressive Safari caching
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
       const response = await fetch(`${NOTIONFLOW_RAW_URL}?t=${now}`, {
         cache: 'no-cache',
         headers: { 'Accept': 'text/plain' },
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) return { hasUpdate: false };
 
@@ -160,7 +165,7 @@ export class UpdateChecker {
       <button class="notionflow-update-dismiss" id="notionflow-dismiss-update">✕</button>
     `;
 
-    document.body.appendChild(banner);
+    safeAppendBody(banner);
 
     requestAnimationFrame(() => {
       banner.classList.add('visible');

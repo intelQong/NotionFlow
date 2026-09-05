@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 const banner = `// ==UserScript==
 // @name         NotionFlow - Desktop Superpowers on Mobile iOS
 // @namespace    https://github.com/intelQong/NotionFlow
-// @version      1.3.0
+// @version      1.3.1
 // @description  Forces desktop Notion on iOS with dynamic UI/UX adaptation: snap carousels, sticky table headers, touch handles, and floating toolbar.
 // @author       intelQong
 // @updateURL    https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js

@@ -11,6 +11,8 @@ export interface ViewportConfig {
   maxZoom: number;      // Maximum zoom allowed (e.g. 150)
 }
 
+import { safeAppend } from './dom-utils';
+
 const STORAGE_KEY_ZOOM = 'notionflow_zoom_level';
 
 export class ViewportController {
@@ -53,7 +55,7 @@ export class ViewportController {
     if (!this.styleElement) {
       this.styleElement = document.createElement('style');
       this.styleElement.id = 'notionflow-viewport-style';
-      document.head.appendChild(this.styleElement);
+      safeAppend(this.styleElement);
     }
   }
 
@@ -62,7 +64,7 @@ export class ViewportController {
     if (!meta) {
       meta = document.createElement('meta');
       meta.name = 'viewport';
-      document.head.appendChild(meta);
+      safeAppend(meta);
     }
 
     // Set interactive responsive desktop viewport

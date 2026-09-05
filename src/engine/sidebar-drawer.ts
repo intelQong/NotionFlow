@@ -4,6 +4,8 @@
  * with backdrop blur, tap-to-dismiss, and bezel swipe gestures.
  */
 
+import { safeAppend, safeAppendBody } from './dom-utils';
+
 export class SidebarDrawerManager {
   private backdrop: HTMLElement | null = null;
   private touchStartX: number = 0;
@@ -69,7 +71,7 @@ export class SidebarDrawerManager {
         }
       }
     `;
-    document.head.appendChild(style);
+    safeAppend(style);
   }
 
   private createBackdrop(): void {
@@ -80,7 +82,7 @@ export class SidebarDrawerManager {
     this.backdrop.addEventListener('click', () => {
       this.closeSidebar();
     });
-    document.body.appendChild(this.backdrop);
+    safeAppendBody(this.backdrop);
   }
 
   public isSidebarOpen(): boolean {
@@ -117,18 +119,32 @@ export class SidebarDrawerManager {
 
   private observeSidebarState(): void {
     // Watch for sidebar width or class changes to toggle backdrop
+    let checkQueued = false;
     const checkSidebar = () => {
+      checkQueued = false;
+      if (!this.backdrop) return;
       if (window.innerWidth > 768) {
-        this.backdrop?.classList.remove('active');
+        if (this.backdrop.classList.contains('active')) {
+          this.backdrop.classList.remove('active');
+        }
         return;
       }
       const open = this.isSidebarOpen();
-      this.backdrop?.classList.toggle('active', open);
+      const isActive = this.backdrop.classList.contains('active');
+      if (open !== isActive) {
+        this.backdrop.classList.toggle('active', open);
+      }
     };
 
-    const observer = new MutationObserver(checkSidebar);
-    observer.observe(document.body, { attributes: true, subtree: true, childList: true });
-    window.addEventListener('resize', checkSidebar);
+    const queueCheck = () => {
+      if (checkQueued) return;
+      checkQueued = true;
+      requestAnimationFrame(checkSidebar);
+    };
+
+    const observer = new MutationObserver(queueCheck);
+    observer.observe(document.body || document.documentElement, { attributes: true, subtree: true, childList: true });
+    window.addEventListener('resize', queueCheck);
   }
 
   private setupSwipeGestures(): void {

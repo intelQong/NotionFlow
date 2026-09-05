@@ -4,6 +4,8 @@
  * and provides one-tap access to Notion block actions (+ and :: handles).
  */
 
+import { safeAppend, safeAppendBody } from './dom-utils';
+
 export class TouchHandlesManager {
   private activeBlock: HTMLElement | null = null;
   private actionPopup: HTMLElement | null = null;
@@ -101,7 +103,7 @@ export class TouchHandlesManager {
         color: #ff6b6b;
       }
     `;
-    document.head.appendChild(style);
+    safeAppend(style);
   }
 
   private createActionPopup(): void {
@@ -132,7 +134,7 @@ export class TouchHandlesManager {
       this.handleBlockAction(action, this.activeBlock);
     });
 
-    document.body.appendChild(this.actionPopup);
+    safeAppendBody(this.actionPopup);
   }
 
   private setupTouchListeners(): void {

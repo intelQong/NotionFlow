@@ -5,6 +5,8 @@
  * Ensures Notion serves full desktop Settings & Members and desktop Notifications.
  */
 
+import { safeAppend } from './dom-utils';
+
 export function initSpoofing(): void {
   const DESKTOP_UA =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15';
@@ -80,20 +82,13 @@ export function initSpoofing(): void {
       window.matchMedia = function (query: string): MediaQueryList {
         const mql = origMatchMedia.call(window, query);
         if (/pointer:\s*coarse/i.test(query) || /hover:\s*none/i.test(query) || /display-mode:\s*standalone/i.test(query)) {
-          return new Proxy(mql, {
-            get(target, prop) {
-              if (prop === 'matches') return false;
-              return (target as any)[prop];
-            }
-          });
-        }
-        if (/pointer:\s*fine/i.test(query) || /hover:\s*hover/i.test(query)) {
-          return new Proxy(mql, {
-            get(target, prop) {
-              if (prop === 'matches') return true;
-              return (target as any)[prop];
-            }
-          });
+          try {
+            Object.defineProperty(mql, 'matches', { get: () => false, configurable: true });
+          } catch {}
+        } else if (/pointer:\s*fine/i.test(query) || /hover:\s*hover/i.test(query)) {
+          try {
+            Object.defineProperty(mql, 'matches', { get: () => true, configurable: true });
+          } catch {}
         }
         return mql;
       };
@@ -102,7 +97,66 @@ export function initSpoofing(): void {
     console.warn('[NotionFlow] matchMedia override skipped:', e);
   }
 
-  // 5. Suppress Notion Mobile Smart App Banner and Deep Linking
+  // 5. Neutralize Notion's iPad detection ("ontouchend" in document)
+  // Notion checks: ("MacIntel" === a.platform && "ontouchend" in document) to identify iPads.
+  // Stripping touch event listener properties from Document, Window, and Element prototypes
+  // ensures Notion's module 900532 evaluates isIpad=false, isIOS=false, isMobile=false, isDesktop=true.
+  try {
+    const touchProps = ['ontouchstart', 'ontouchend', 'ontouchmove', 'ontouchcancel'];
+    const touchTargets = [
+      Document.prototype,
+      typeof HTMLDocument !== 'undefined' ? HTMLDocument.prototype : null,
+      window,
+      typeof Window !== 'undefined' ? Window.prototype : null,
+      document,
+      Element.prototype,
+      HTMLElement.prototype
+    ].filter(Boolean);
+
+    for (const tgt of touchTargets) {
+      for (const prop of touchProps) {
+        try {
+          delete (tgt as any)[prop];
+        } catch {}
+      }
+    }
+  } catch (e) {
+    console.warn('[NotionFlow] ontouchend neutralization error:', e);
+  }
+
+  // 6. Intercept Notion's module 386961 global CONFIG
+  // Locks window.CONFIG.isMobile to false so Notion's route parser and sidebar load in desktop mode.
+  try {
+    (window as any).CONFIG_OVERRIDE = Object.assign((window as any).CONFIG_OVERRIDE || {}, {
+      isMobile: false
+    });
+
+    let configVal: any = (window as any).CONFIG;
+    Object.defineProperty(window, 'CONFIG', {
+      get: () => configVal,
+      set: (val) => {
+        if (val && typeof val === 'object') {
+          try {
+            Object.defineProperty(val, 'isMobile', {
+              get: () => false,
+              set: () => {},
+              configurable: false,
+              enumerable: true
+            });
+          } catch {
+            val.isMobile = false;
+          }
+        }
+        configVal = val;
+      },
+      configurable: true,
+      enumerable: true
+    });
+  } catch (e) {
+    console.warn('[NotionFlow] CONFIG intercept error:', e);
+  }
+
+  // 7. Suppress Notion Mobile Smart App Banner and Deep Linking
   const suppressMobileBanners = () => {
     // Remove Apple Smart App Banner
     const appBanner = document.querySelector('meta[name="apple-itunes-app"]');
@@ -127,7 +181,7 @@ export function initSpoofing(): void {
       }
     `;
     if (!document.getElementById('notionflow-anti-mobile-banner')) {
-      document.head.appendChild(style);
+      safeAppend(style);
     }
   };
 
@@ -137,7 +191,7 @@ export function initSpoofing(): void {
     suppressMobileBanners();
   }
 
-  // 6. Intercept window.open targeting mobile redirects
+  // 8. Intercept window.open targeting mobile redirects
   const originalOpen = window.open;
   window.open = function (url?: string | URL, target?: string, features?: string): Window | null {
     if (typeof url === 'string') {

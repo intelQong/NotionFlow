@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NotionFlow - Desktop Superpowers on Mobile iOS
 // @namespace    https://github.com/intelQong/NotionFlow
-// @version      1.3.0
+// @version      1.3.1
 // @description  Forces desktop Notion on iOS with dynamic UI/UX adaptation: snap carousels, sticky table headers, touch handles, and floating toolbar.
 // @author       intelQong
 // @updateURL    https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js
@@ -19,6 +19,43 @@
 
 "use strict";
 (() => {
+  // src/engine/dom-utils.ts
+  function safeAppend(element) {
+    const target = document.head || document.documentElement || document.body;
+    if (target) {
+      target.appendChild(element);
+    } else {
+      const onReady = () => {
+        const el = document.head || document.documentElement || document.body;
+        if (el && !element.parentElement) {
+          el.appendChild(element);
+        }
+      };
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", onReady, { once: true });
+      } else {
+        setTimeout(onReady, 0);
+      }
+    }
+  }
+  function safeAppendBody(element) {
+    if (document.body) {
+      document.body.appendChild(element);
+      return;
+    }
+    const onReady = () => {
+      if (document.body && !element.parentElement) {
+        document.body.appendChild(element);
+      }
+    };
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", onReady, { once: true });
+    }
+    window.addEventListener("load", onReady, { once: true });
+    setTimeout(onReady, 0);
+    setTimeout(onReady, 50);
+  }
+
   // src/engine/spoof.ts
   function initSpoofing() {
     const DESKTOP_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15";
@@ -79,26 +116,72 @@
         window.matchMedia = function(query) {
           const mql = origMatchMedia.call(window, query);
           if (/pointer:\s*coarse/i.test(query) || /hover:\s*none/i.test(query) || /display-mode:\s*standalone/i.test(query)) {
-            return new Proxy(mql, {
-              get(target, prop) {
-                if (prop === "matches") return false;
-                return target[prop];
-              }
-            });
-          }
-          if (/pointer:\s*fine/i.test(query) || /hover:\s*hover/i.test(query)) {
-            return new Proxy(mql, {
-              get(target, prop) {
-                if (prop === "matches") return true;
-                return target[prop];
-              }
-            });
+            try {
+              Object.defineProperty(mql, "matches", { get: () => false, configurable: true });
+            } catch {
+            }
+          } else if (/pointer:\s*fine/i.test(query) || /hover:\s*hover/i.test(query)) {
+            try {
+              Object.defineProperty(mql, "matches", { get: () => true, configurable: true });
+            } catch {
+            }
           }
           return mql;
         };
       }
     } catch (e) {
       console.warn("[NotionFlow] matchMedia override skipped:", e);
+    }
+    try {
+      const touchProps = ["ontouchstart", "ontouchend", "ontouchmove", "ontouchcancel"];
+      const touchTargets = [
+        Document.prototype,
+        typeof HTMLDocument !== "undefined" ? HTMLDocument.prototype : null,
+        window,
+        typeof Window !== "undefined" ? Window.prototype : null,
+        document,
+        Element.prototype,
+        HTMLElement.prototype
+      ].filter(Boolean);
+      for (const tgt of touchTargets) {
+        for (const prop of touchProps) {
+          try {
+            delete tgt[prop];
+          } catch {
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[NotionFlow] ontouchend neutralization error:", e);
+    }
+    try {
+      window.CONFIG_OVERRIDE = Object.assign(window.CONFIG_OVERRIDE || {}, {
+        isMobile: false
+      });
+      let configVal = window.CONFIG;
+      Object.defineProperty(window, "CONFIG", {
+        get: () => configVal,
+        set: (val) => {
+          if (val && typeof val === "object") {
+            try {
+              Object.defineProperty(val, "isMobile", {
+                get: () => false,
+                set: () => {
+                },
+                configurable: false,
+                enumerable: true
+              });
+            } catch {
+              val.isMobile = false;
+            }
+          }
+          configVal = val;
+        },
+        configurable: true,
+        enumerable: true
+      });
+    } catch (e) {
+      console.warn("[NotionFlow] CONFIG intercept error:", e);
     }
     const suppressMobileBanners = () => {
       const appBanner = document.querySelector('meta[name="apple-itunes-app"]');
@@ -121,7 +204,7 @@
       }
     `;
       if (!document.getElementById("notionflow-anti-mobile-banner")) {
-        document.head.appendChild(style);
+        safeAppend(style);
       }
     };
     if (document.readyState === "loading") {
@@ -178,7 +261,7 @@
       if (!this.styleElement) {
         this.styleElement = document.createElement("style");
         this.styleElement.id = "notionflow-viewport-style";
-        document.head.appendChild(this.styleElement);
+        safeAppend(this.styleElement);
       }
     }
     setupViewportMeta() {
@@ -186,7 +269,7 @@
       if (!meta) {
         meta = document.createElement("meta");
         meta.name = "viewport";
-        document.head.appendChild(meta);
+        safeAppend(meta);
       }
       meta.content = `width=${this.config.defaultWidth}, initial-scale=1.0, minimum-scale=0.5, maximum-scale=3.0, user-scalable=yes, viewport-fit=cover`;
     }
@@ -348,7 +431,7 @@
         }
       }
     `;
-      document.head.appendChild(style);
+      safeAppend(style);
     }
     scanAndTransform() {
       if (!this.enabled) return;
@@ -519,7 +602,7 @@
         cursor: pointer;
       }
     `;
-      document.head.appendChild(style);
+      safeAppend(style);
       document.documentElement.classList.add("notionflow-sticky-col-enabled");
     }
     enhanceTables() {
@@ -557,12 +640,18 @@
         closeBtn.className = "notionflow-db-close-btn";
         closeBtn.innerHTML = "\u2715 Exit Focus";
         closeBtn.addEventListener("click", () => this.toggleDatabaseFocus());
-        document.body.appendChild(closeBtn);
+        safeAppendBody(closeBtn);
       }
     }
     observeMutations() {
+      let checkQueued = false;
       this.observer = new MutationObserver(() => {
-        this.enhanceTables();
+        if (checkQueued) return;
+        checkQueued = true;
+        requestAnimationFrame(() => {
+          checkQueued = false;
+          this.enhanceTables();
+        });
       });
       this.observer.observe(document.body || document.documentElement, {
         childList: true,
@@ -665,7 +754,7 @@
         color: #ff6b6b;
       }
     `;
-      document.head.appendChild(style);
+      safeAppend(style);
     }
     createActionPopup() {
       if (this.actionPopup) return;
@@ -691,7 +780,7 @@
         const action = target.getAttribute("data-action");
         this.handleBlockAction(action, this.activeBlock);
       });
-      document.body.appendChild(this.actionPopup);
+      safeAppendBody(this.actionPopup);
     }
     setupTouchListeners() {
       document.addEventListener("touchstart", (e) => {
@@ -813,7 +902,7 @@
         }
       }
     `;
-      document.head.appendChild(style);
+      safeAppend(style);
     }
     createBackdrop() {
       if (this.backdrop) return;
@@ -822,7 +911,7 @@
       this.backdrop.addEventListener("click", () => {
         this.closeSidebar();
       });
-      document.body.appendChild(this.backdrop);
+      safeAppendBody(this.backdrop);
     }
     isSidebarOpen() {
       const sidebar = document.querySelector(".notion-sidebar-container");
@@ -850,17 +939,30 @@
       }
     }
     observeSidebarState() {
+      let checkQueued = false;
       const checkSidebar = () => {
+        checkQueued = false;
+        if (!this.backdrop) return;
         if (window.innerWidth > 768) {
-          this.backdrop?.classList.remove("active");
+          if (this.backdrop.classList.contains("active")) {
+            this.backdrop.classList.remove("active");
+          }
           return;
         }
         const open = this.isSidebarOpen();
-        this.backdrop?.classList.toggle("active", open);
+        const isActive = this.backdrop.classList.contains("active");
+        if (open !== isActive) {
+          this.backdrop.classList.toggle("active", open);
+        }
       };
-      const observer = new MutationObserver(checkSidebar);
-      observer.observe(document.body, { attributes: true, subtree: true, childList: true });
-      window.addEventListener("resize", checkSidebar);
+      const queueCheck = () => {
+        if (checkQueued) return;
+        checkQueued = true;
+        requestAnimationFrame(checkSidebar);
+      };
+      const observer = new MutationObserver(queueCheck);
+      observer.observe(document.body || document.documentElement, { attributes: true, subtree: true, childList: true });
+      window.addEventListener("resize", queueCheck);
     }
     setupSwipeGestures() {
       document.addEventListener("touchstart", (e) => {
@@ -965,7 +1067,7 @@
         color: #aaa;
       }
     `;
-      document.head.appendChild(style);
+      safeAppend(style);
     }
     createToolbar() {
       if (this.toolbar) return;
@@ -1002,7 +1104,7 @@
         });
         this.toolbar.appendChild(button);
       });
-      document.body.appendChild(this.toolbar);
+      safeAppendBody(this.toolbar);
     }
     setupFocusListeners() {
       document.addEventListener("focusin", (e) => {
@@ -1216,7 +1318,7 @@
         }
       }
     `;
-      document.head.appendChild(style);
+      safeAppend(style);
     }
     /**
      * Opens Notion's full desktop Settings & Members dialog.
@@ -1317,7 +1419,7 @@
       return null;
     }
     dispatchShortcut() {
-      const target = document.activeElement || document.body;
+      const target = document.activeElement || document.body || document.documentElement || window;
       const evtMac = new KeyboardEvent("keydown", {
         key: ",",
         code: "Comma",
@@ -1347,14 +1449,20 @@
       return true;
     }
     observeSettingsDialog() {
+      let checkQueued = false;
       const observer = new MutationObserver(() => {
-        const dialog = document.querySelector('[role="dialog"]');
-        if (dialog && !dialog.classList.contains("notionflow-settings-enhanced")) {
-          dialog.classList.add("notionflow-settings-enhanced");
-          dialog.style.setProperty("-webkit-overflow-scrolling", "touch");
-        }
+        if (checkQueued) return;
+        checkQueued = true;
+        requestAnimationFrame(() => {
+          checkQueued = false;
+          const dialog = document.querySelector('[role="dialog"]');
+          if (dialog && !dialog.classList.contains("notionflow-settings-enhanced")) {
+            dialog.classList.add("notionflow-settings-enhanced");
+            dialog.style.setProperty("-webkit-overflow-scrolling", "touch");
+          }
+        });
       });
-      observer.observe(document.body, { childList: true, subtree: true });
+      observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
     }
     setupModalDismissListeners() {
       document.addEventListener("click", (e) => {
@@ -1375,7 +1483,7 @@
   };
 
   // src/engine/updater.ts
-  var NOTIONFLOW_VERSION = "1.3.0";
+  var NOTIONFLOW_VERSION = "1.3.1";
   var NOTIONFLOW_RAW_URL = "https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js";
   var UpdateChecker = class {
     lastCheckKey = "notionflow_last_update_check";
@@ -1460,7 +1568,7 @@
         justify-content: center;
       }
     `;
-      document.head.appendChild(style);
+      safeAppend(style);
     }
     async check(force = false) {
       const now = Date.now();
@@ -1469,10 +1577,14 @@
         return { hasUpdate: false };
       }
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5e3);
         const response = await fetch(`${NOTIONFLOW_RAW_URL}?t=${now}`, {
           cache: "no-cache",
-          headers: { "Accept": "text/plain" }
+          headers: { "Accept": "text/plain" },
+          signal: controller.signal
         });
+        clearTimeout(timeoutId);
         if (!response.ok) return { hasUpdate: false };
         const scriptText = await response.text();
         localStorage.setItem(this.lastCheckKey, now.toString());
@@ -1514,7 +1626,7 @@
       <a class="notionflow-update-btn" href="${NOTIONFLOW_RAW_URL}" target="_blank">Update</a>
       <button class="notionflow-update-dismiss" id="notionflow-dismiss-update">\u2715</button>
     `;
-      document.body.appendChild(banner);
+      safeAppendBody(banner);
       requestAnimationFrame(() => {
         banner.classList.add("visible");
       });
@@ -1690,11 +1802,12 @@
         color: #fff;
       }
     `;
-      document.head.appendChild(style);
+      safeAppend(style);
     }
     createBar() {
       if (this.container) return;
       this.container = document.createElement("div");
+      this.container.id = "notionflow-fab-container";
       this.container.className = "notionflow-fab-container";
       this.container.innerHTML = `
       <!-- Sidebar Toggle -->
@@ -1783,7 +1896,7 @@
       </button>
     `;
       this.attachEventListeners();
-      document.body.appendChild(this.container);
+      safeAppendBody(this.container);
     }
     attachEventListeners() {
       this.container?.querySelector("#notionflow-btn-sidebar")?.addEventListener("click", () => {

@@ -5,6 +5,8 @@
  * and ensures full mobile touch responsiveness on iOS screens.
  */
 
+import { safeAppend } from './dom-utils';
+
 export class SettingsManager {
   private isModalOpen: boolean = false;
 
@@ -126,7 +128,7 @@ export class SettingsManager {
         }
       }
     `;
-    document.head.appendChild(style);
+    safeAppend(style);
   }
 
   /**
@@ -251,7 +253,7 @@ export class SettingsManager {
   }
 
   private dispatchShortcut(): boolean {
-    const target = document.activeElement || document.body;
+    const target = document.activeElement || document.body || document.documentElement || window;
 
     // Mac Cmd+, event
     const evtMac = new KeyboardEvent('keydown', {
@@ -287,16 +289,22 @@ export class SettingsManager {
   }
 
   private observeSettingsDialog(): void {
+    let checkQueued = false;
     const observer = new MutationObserver(() => {
-      const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
-      if (dialog && !dialog.classList.contains('notionflow-settings-enhanced')) {
-        dialog.classList.add('notionflow-settings-enhanced');
-        // Ensure scroll elasticity on iOS
-        dialog.style.setProperty('-webkit-overflow-scrolling', 'touch');
-      }
+      if (checkQueued) return;
+      checkQueued = true;
+      requestAnimationFrame(() => {
+        checkQueued = false;
+        const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
+        if (dialog && !dialog.classList.contains('notionflow-settings-enhanced')) {
+          dialog.classList.add('notionflow-settings-enhanced');
+          // Ensure scroll elasticity on iOS
+          dialog.style.setProperty('-webkit-overflow-scrolling', 'touch');
+        }
+      });
     });
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
   }
 
   private setupModalDismissListeners(): void {

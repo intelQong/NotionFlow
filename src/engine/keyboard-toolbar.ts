@@ -4,6 +4,8 @@
  * indent/outdent, and slash commands docked above the virtual keyboard.
  */
 
+import { safeAppend, safeAppendBody } from './dom-utils';
+
 export class KeyboardToolbarManager {
   private toolbar: HTMLElement | null = null;
   private currentEditable: HTMLElement | null = null;
@@ -87,7 +89,7 @@ export class KeyboardToolbarManager {
         color: #aaa;
       }
     `;
-    document.head.appendChild(style);
+    safeAppend(style);
   }
 
   private createToolbar(): void {
@@ -133,7 +135,7 @@ export class KeyboardToolbarManager {
       this.toolbar!.appendChild(button);
     });
 
-    document.body.appendChild(this.toolbar);
+    safeAppendBody(this.toolbar);
   }
 
   private setupFocusListeners(): void {

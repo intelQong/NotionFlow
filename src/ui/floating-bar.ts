@@ -9,6 +9,7 @@ import { SidebarDrawerManager } from '../engine/sidebar-drawer';
 import { ColumnsCarouselManager } from '../engine/columns-carousel';
 import { SettingsManager } from '../engine/settings';
 import { UpdateChecker, NOTIONFLOW_VERSION } from '../engine/updater';
+import { safeAppend, safeAppendBody } from '../engine/dom-utils';
 
 export class FloatingBar {
   private container: HTMLElement | null = null;
@@ -179,13 +180,14 @@ export class FloatingBar {
         color: #fff;
       }
     `;
-    document.head.appendChild(style);
+    safeAppend(style);
   }
 
   private createBar(): void {
     if (this.container) return;
 
     this.container = document.createElement('div');
+    this.container.id = 'notionflow-fab-container';
     this.container.className = 'notionflow-fab-container';
 
     this.container.innerHTML = `
@@ -276,7 +278,7 @@ export class FloatingBar {
     `;
 
     this.attachEventListeners();
-    document.body.appendChild(this.container);
+    safeAppendBody(this.container);
   }
 
   private attachEventListeners(): void {

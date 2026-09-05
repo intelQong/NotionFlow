@@ -4,6 +4,8 @@
  * swipeable card carousels with pagination dots on mobile viewports.
  */
 
+import { safeAppend } from './dom-utils';
+
 export class ColumnsCarouselManager {
   private enabled: boolean = true;
   private observer: MutationObserver | null = null;
@@ -102,7 +104,7 @@ export class ColumnsCarouselManager {
         }
       }
     `;
-    document.head.appendChild(style);
+    safeAppend(style);
   }
 
   private scanAndTransform(): void {
