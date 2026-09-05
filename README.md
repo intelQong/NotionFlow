@@ -85,17 +85,50 @@ Open `http://localhost:5173` to test:
 
 ---
 
-### 2. Standalone Safari iOS Userscript (Zero-Install Method)
-If you want to use NotionFlow inside Mobile Safari on iOS without Xcode:
+## 📱 Quick iOS Setup Guide (Zero-Mac / 60 Seconds)
 
-1. Build the userscript:
-   ```bash
-   npm run build:userscript
-   ```
-2. The compiled script will be located at `dist/notion-flow.user.js`.
-3. Install a Safari extension manager on your iPhone (such as **Userscripts**, **Stay**, or the **Orion Browser** from the App Store).
-4. Import `notion-flow.user.js` into the extension and enable it for `https://*.notion.so/*`.
-5. Open `notion.so` in Safari and enjoy full desktop mode with dynamic mobile adaptations!
+> [!TIP]
+> **No Mac or Xcode required!** You can run NotionFlow directly inside Mobile Safari on your iPhone or iPad using the free, open-source **Userscripts** Safari extension.
+
+### Step 1: Install the Free "Userscripts" Extension
+1. Open the App Store on your iPhone/iPad and install **[Userscripts](https://apps.apple.com/app/userscripts/id1463298887)** *(Free, open-source, no ads or tracking)*.
+2. Go to iPhone **Settings** ➔ **Safari** ➔ **Extensions**.
+3. Tap **Userscripts**:
+   - Toggle **Allow Extension** to **ON**.
+   - Under *Permissions for Userscripts*, tap **All Websites** and select **Allow**.
+
+### Step 2: Set the Script Directory (10 Seconds)
+1. Open the **Userscripts** app from your iPhone home screen once.
+2. Tap **Set Userscripts Directory** and select any folder in the Files app (e.g., `On My iPhone` ➔ `Userscripts`).
+
+### Step 3: Add NotionFlow to Userscripts
+Choose either of the two quick methods:
+
+* **Option A (Download File)**:
+  1. In Safari on your iPhone, open your release asset: [**NotionFlow v1.0.0 Release**](https://github.com/intelQong/notion-wraper-ios/releases/tag/v1.0.0).
+  2. Tap **`notion-flow.user.js`** to download it.
+  3. Move or save the downloaded file into your **Userscripts** folder in the Files app.
+
+* **Option B (Copy & Paste in Safari)**:
+  1. Open [**dist/notion-flow.user.js**](https://github.com/intelQong/notion-wraper-ios/blob/main/dist/notion-flow.user.js) on GitHub and copy the raw code.
+  2. In Safari, tap the **Extensions** icon (puzzle piece 🧩 or `aA` button) in the address bar ➔ tap **Userscripts**.
+  3. Tap the **`+` (New Script)** button, paste the code, and tap **Save**.
+
+### Step 4: Launch Notion Desktop
+1. Open **`https://www.notion.so`** in Safari.
+2. Notion automatically runs in **full desktop mode** with all superpowers:
+   - 🗂️ **Horizontal Snap-Carousel**: Swipe smoothly between multi-column dashboard cards.
+   - 📊 **Frozen Database Headers**: Sticky title columns remain visible while scrolling wide tables, plus a **"Focus View"** button.
+   - ⚡ **Floating Action Bar (FAB)**: 1-tap search (`Cmd+P`), sidebar drawer toggle, dynamic zoom slider (60%–140%), and undo/redo.
+   - ⌨️ **Keyboard Toolbar**: Markdown shortcuts docked right above your virtual keyboard.
+   - 👆 **Touch Block Handles**: Tap any block to reveal add (`+`), duplicate, and delete controls.
+
+### Step 5: Turn Into a Full-Screen Standalone App (Optional)
+To remove Safari's top and bottom browser bars:
+1. While on `notion.so` in Safari, tap the **Share** button (box with upward arrow).
+2. Scroll down and tap **Add to Home Screen**.
+3. Name it **NotionFlow** and tap **Add**.
+4. Open the new app icon from your home screen for an edge-to-edge native experience!
 
 ---
 
