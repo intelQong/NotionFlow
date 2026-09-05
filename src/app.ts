@@ -1,7 +1,7 @@
 /**
  * NotionFlow - Main Application Coordinator
  * Boots up desktop spoofing, viewport management, snap carousel,
- * database enhancements, touch handles, keyboard toolbar, settings manager, and FAB.
+ * database enhancements, touch handles, keyboard toolbar, settings manager, updater, and FAB.
  */
 
 import { initSpoofing } from './engine/spoof';
@@ -12,6 +12,7 @@ import { TouchHandlesManager } from './engine/touch-handles';
 import { SidebarDrawerManager } from './engine/sidebar-drawer';
 import { KeyboardToolbarManager } from './engine/keyboard-toolbar';
 import { SettingsManager } from './engine/settings';
+import { UpdateChecker } from './engine/updater';
 import { FloatingBar } from './ui/floating-bar';
 import { SimulatorFrame } from './ui/simulator-frame';
 
@@ -23,6 +24,7 @@ export class NotionFlowApp {
   private sidebar: SidebarDrawerManager;
   private keyboard: KeyboardToolbarManager;
   private settings: SettingsManager;
+  private updater: UpdateChecker;
   private floatingBar: FloatingBar;
   private simulator: SimulatorFrame;
 
@@ -38,7 +40,8 @@ export class NotionFlowApp {
     this.sidebar = new SidebarDrawerManager();
     this.keyboard = new KeyboardToolbarManager();
     this.settings = new SettingsManager();
-    this.floatingBar = new FloatingBar(this.viewport, this.sidebar, this.carousel, this.settings);
+    this.updater = new UpdateChecker();
+    this.floatingBar = new FloatingBar(this.viewport, this.sidebar, this.carousel, this.settings, this.updater);
     this.simulator = new SimulatorFrame();
   }
 
@@ -56,6 +59,7 @@ export class NotionFlowApp {
     this.sidebar.init();
     this.keyboard.init();
     this.settings.init();
+    this.updater.init();
     this.floatingBar.init();
 
     console.log('[NotionFlow] All power-user mobile wrapper systems active 🚀');

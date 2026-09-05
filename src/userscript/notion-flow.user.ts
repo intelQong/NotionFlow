@@ -12,6 +12,7 @@ import { TouchHandlesManager } from '../engine/touch-handles';
 import { SidebarDrawerManager } from '../engine/sidebar-drawer';
 import { KeyboardToolbarManager } from '../engine/keyboard-toolbar';
 import { SettingsManager } from '../engine/settings';
+import { UpdateChecker } from '../engine/updater';
 import { FloatingBar } from '../ui/floating-bar';
 
 (function () {
@@ -31,7 +32,8 @@ import { FloatingBar } from '../ui/floating-bar';
       const sidebar = new SidebarDrawerManager();
       const keyboard = new KeyboardToolbarManager();
       const settings = new SettingsManager();
-      const floatingBar = new FloatingBar(viewport, sidebar, carousel, settings);
+      const updater = new UpdateChecker();
+      const floatingBar = new FloatingBar(viewport, sidebar, carousel, settings, updater);
 
       viewport.init();
       carousel.init();
@@ -40,9 +42,10 @@ import { FloatingBar } from '../ui/floating-bar';
       sidebar.init();
       keyboard.init();
       settings.init();
+      updater.init();
       floatingBar.init();
 
-      console.log('[NotionFlow Userscript] All systems operational with Full Settings access 🚀');
+      console.log('[NotionFlow Userscript] All systems operational with Auto-Updater active 🚀');
     } catch (err) {
       console.error('[NotionFlow Userscript] Initialization error:', err);
     }

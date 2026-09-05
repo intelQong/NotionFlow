@@ -1267,13 +1267,165 @@
     }
   };
 
+  // src/engine/updater.ts
+  var NOTIONFLOW_VERSION = "1.2.0";
+  var NOTIONFLOW_RAW_URL = "https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js";
+  var UpdateChecker = class {
+    lastCheckKey = "notionflow_last_update_check";
+    checkIntervalMs = 12 * 60 * 60 * 1e3;
+    // Check every 12 hours
+    constructor() {
+      this.injectStyles();
+    }
+    init() {
+      setTimeout(() => {
+        this.check(false);
+      }, 4e3);
+    }
+    injectStyles() {
+      if (document.getElementById("notionflow-updater-styles")) return;
+      const style = document.createElement("style");
+      style.id = "notionflow-updater-styles";
+      style.textContent = `
+      .notionflow-update-banner {
+        position: fixed;
+        top: 14px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-20px);
+        opacity: 0;
+        z-index: 100002;
+        background: rgba(26, 26, 28, 0.95);
+        backdrop-filter: blur(24px) saturate(180%);
+        -webkit-backdrop-filter: blur(24px) saturate(180%);
+        border: 1px solid rgba(35, 131, 226, 0.5);
+        border-radius: 16px;
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(35, 131, 226, 0.25);
+        transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        max-width: 90vw;
+        user-select: none;
+      }
+
+      .notionflow-update-banner.visible {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+
+      .notionflow-update-text {
+        font-size: 13px;
+        font-weight: 500;
+        color: #ffffff;
+        line-height: 1.3;
+      }
+
+      .notionflow-update-btn {
+        background: #2383e2;
+        color: #ffffff;
+        border: none;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .notionflow-update-btn:active {
+        opacity: 0.85;
+      }
+
+      .notionflow-update-dismiss {
+        background: transparent;
+        border: none;
+        color: #888;
+        font-size: 16px;
+        cursor: pointer;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    `;
+      document.head.appendChild(style);
+    }
+    async check(force = false) {
+      const now = Date.now();
+      const lastCheck = parseInt(localStorage.getItem(this.lastCheckKey) || "0", 10);
+      if (!force && now - lastCheck < this.checkIntervalMs) {
+        return { hasUpdate: false };
+      }
+      try {
+        const response = await fetch(`${NOTIONFLOW_RAW_URL}?t=${now}`, {
+          cache: "no-cache",
+          headers: { "Accept": "text/plain" }
+        });
+        if (!response.ok) return { hasUpdate: false };
+        const scriptText = await response.text();
+        localStorage.setItem(this.lastCheckKey, now.toString());
+        const match = scriptText.match(/\/\/\s*@version\s+([0-9.]+)/i);
+        if (match && match[1]) {
+          const latestVersion = match[1].trim();
+          if (this.isNewer(latestVersion, NOTIONFLOW_VERSION)) {
+            this.showUpdateBanner(latestVersion);
+            return { hasUpdate: true, latestVersion };
+          }
+        }
+      } catch (e) {
+        console.warn("[NotionFlow] Auto-update check skipped:", e);
+      }
+      return { hasUpdate: false };
+    }
+    isNewer(remote, current) {
+      const rParts = remote.split(".").map((n) => parseInt(n, 10) || 0);
+      const cParts = current.split(".").map((n) => parseInt(n, 10) || 0);
+      for (let i = 0; i < Math.max(rParts.length, cParts.length); i++) {
+        const r = rParts[i] || 0;
+        const c = cParts[i] || 0;
+        if (r > c) return true;
+        if (r < c) return false;
+      }
+      return false;
+    }
+    showUpdateBanner(newVersion) {
+      if (document.getElementById("notionflow-update-banner")) return;
+      const banner = document.createElement("div");
+      banner.id = "notionflow-update-banner";
+      banner.className = "notionflow-update-banner";
+      banner.innerHTML = `
+      <div style="font-size: 18px;">\u{1F680}</div>
+      <div class="notionflow-update-text">
+        <div><strong>NotionFlow v${newVersion}</strong> is available!</div>
+        <div style="font-size: 11px; color: #aaa;">Current: v${NOTIONFLOW_VERSION}</div>
+      </div>
+      <a class="notionflow-update-btn" href="${NOTIONFLOW_RAW_URL}" target="_blank">Update</a>
+      <button class="notionflow-update-dismiss" id="notionflow-dismiss-update">\u2715</button>
+    `;
+      document.body.appendChild(banner);
+      requestAnimationFrame(() => {
+        banner.classList.add("visible");
+      });
+      banner.querySelector("#notionflow-dismiss-update")?.addEventListener("click", () => {
+        banner.classList.remove("visible");
+        setTimeout(() => banner.remove(), 400);
+      });
+    }
+  };
+
   // src/ui/floating-bar.ts
   var FloatingBar = class {
-    constructor(viewport, sidebar, carousel, settings) {
+    constructor(viewport, sidebar, carousel, settings, updater) {
       this.viewport = viewport;
       this.sidebar = sidebar;
       this.carousel = carousel;
       this.settings = settings;
+      this.updater = updater;
       this.injectStyles();
     }
     container = null;
@@ -1387,7 +1539,7 @@
         display: none;
         flex-direction: column;
         gap: 10px;
-        min-width: 220px;
+        min-width: 230px;
         box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6);
       }
 
@@ -1495,6 +1647,14 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             Full Settings & Members
           </button>
+
+          <div style="height: 1px; background: rgba(255, 255, 255, 0.08); margin: 2px 0;"></div>
+
+          <!-- Version & Update status -->
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #888;">
+            <span>NotionFlow v${NOTIONFLOW_VERSION}</span>
+            <button id="notionflow-btn-check-update" style="background: transparent; border: none; color: #58a6ff; font-size: 11px; font-weight: 600; cursor: pointer; padding: 2px 4px;">Check for update</button>
+          </div>
         </div>
       </div>
 
@@ -1552,6 +1712,17 @@
         zoomMenu?.classList.remove("visible");
         this.settings.openFullSettings();
       });
+      const checkBtn = this.container?.querySelector("#notionflow-btn-check-update");
+      checkBtn?.addEventListener("click", async () => {
+        if (checkBtn) checkBtn.textContent = "Checking...";
+        const res = await this.updater.check(true);
+        if (checkBtn) {
+          checkBtn.textContent = res.hasUpdate ? `Update v${res.latestVersion} available!` : "Up to date \u2713";
+          setTimeout(() => {
+            if (checkBtn) checkBtn.textContent = "Check for update";
+          }, 3500);
+        }
+      });
       zoomSlider?.addEventListener("input", () => {
         const val = parseInt(zoomSlider.value, 10);
         this.viewport.setZoom(val);
@@ -1595,7 +1766,8 @@
         const sidebar = new SidebarDrawerManager();
         const keyboard = new KeyboardToolbarManager();
         const settings = new SettingsManager();
-        const floatingBar = new FloatingBar(viewport, sidebar, carousel, settings);
+        const updater = new UpdateChecker();
+        const floatingBar = new FloatingBar(viewport, sidebar, carousel, settings, updater);
         viewport.init();
         carousel.init();
         database.init();
@@ -1603,8 +1775,9 @@
         sidebar.init();
         keyboard.init();
         settings.init();
+        updater.init();
         floatingBar.init();
-        console.log("[NotionFlow Userscript] All systems operational with Full Settings access \u{1F680}");
+        console.log("[NotionFlow Userscript] All systems operational with Auto-Updater active \u{1F680}");
       } catch (err) {
         console.error("[NotionFlow Userscript] Initialization error:", err);
       }

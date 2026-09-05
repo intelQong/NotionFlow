@@ -145,6 +145,11 @@ Turn NotionFlow into a **distraction-free, full-screen standalone experience** t
 - High-contrast true OLED `#000000` dark theme overrides.
 - Full compatibility with iOS Dynamic Island, notch geometries, and Home Indicator insets.
 
+### 🔄 9. Automatic In-App & Extension Updates
+- **Extension Auto-Updates**: Embedded `@updateURL` and `@downloadURL` headers allow Safari **Userscripts**, **Stay**, and **Tampermonkey** to check for updates and keep you on the latest release automatically.
+- **Smart Notification Banner**: Built-in background checker detects new releases and shows a non-intrusive 1-tap update banner.
+- **Manual Check**: Check anytime from the FAB menu ➔ Scale & Preferences ➔ **"Check for update"**.
+
 ---
 
 ## 🧪 Local Interactive Simulator

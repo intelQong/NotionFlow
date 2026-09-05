@@ -8,6 +8,7 @@ import { ViewportController } from '../engine/viewport';
 import { SidebarDrawerManager } from '../engine/sidebar-drawer';
 import { ColumnsCarouselManager } from '../engine/columns-carousel';
 import { SettingsManager } from '../engine/settings';
+import { UpdateChecker, NOTIONFLOW_VERSION } from '../engine/updater';
 
 export class FloatingBar {
   private container: HTMLElement | null = null;
@@ -18,7 +19,8 @@ export class FloatingBar {
     private viewport: ViewportController,
     private sidebar: SidebarDrawerManager,
     private carousel: ColumnsCarouselManager,
-    private settings: SettingsManager
+    private settings: SettingsManager,
+    private updater: UpdateChecker
   ) {
     this.injectStyles();
   }
@@ -133,7 +135,7 @@ export class FloatingBar {
         display: none;
         flex-direction: column;
         gap: 10px;
-        min-width: 220px;
+        min-width: 230px;
         box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6);
       }
 
@@ -244,6 +246,14 @@ export class FloatingBar {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             Full Settings & Members
           </button>
+
+          <div style="height: 1px; background: rgba(255, 255, 255, 0.08); margin: 2px 0;"></div>
+
+          <!-- Version & Update status -->
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #888;">
+            <span>NotionFlow v${NOTIONFLOW_VERSION}</span>
+            <button id="notionflow-btn-check-update" style="background: transparent; border: none; color: #58a6ff; font-size: 11px; font-weight: 600; cursor: pointer; padding: 2px 4px;">Check for update</button>
+          </div>
         </div>
       </div>
 
@@ -318,6 +328,19 @@ export class FloatingBar {
       this.zoomMenuOpen = false;
       zoomMenu?.classList.remove('visible');
       this.settings.openFullSettings();
+    });
+
+    // Popover Check For Update Button
+    const checkBtn = this.container?.querySelector('#notionflow-btn-check-update') as HTMLElement | null;
+    checkBtn?.addEventListener('click', async () => {
+      if (checkBtn) checkBtn.textContent = 'Checking...';
+      const res = await this.updater.check(true);
+      if (checkBtn) {
+        checkBtn.textContent = res.hasUpdate ? `Update v${res.latestVersion} available!` : 'Up to date ✓';
+        setTimeout(() => {
+          if (checkBtn) checkBtn.textContent = 'Check for update';
+        }, 3500);
+      }
     });
 
     zoomSlider?.addEventListener('input', () => {

@@ -12,6 +12,8 @@ const banner = `// ==UserScript==
 // @version      1.2.0
 // @description  Forces desktop Notion on iOS with dynamic UI/UX adaptation: snap carousels, sticky table headers, touch handles, and floating toolbar.
 // @author       intelQong
+// @updateURL    https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js
+// @downloadURL  https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js
 // @match        https://app.notion.com/*
 // @match        https://*.notion.com/*
 // @match        https://notion.com/*
