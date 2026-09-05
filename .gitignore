@@ -1,5 +1,7 @@
 node_modules/
 dist/
+!dist/notion-flow.user.js
+!dist/notionflow-injection.js
 .DS_Store
 *.log
 .vscode/
