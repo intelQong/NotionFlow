@@ -26,82 +26,20 @@ export class SettingsManager {
     style.id = 'notionflow-settings-styles';
     style.textContent = `
       /* ============================================================
-         Notion Settings & Members Dialog - Mobile Responsive Engine
+         Notion Settings & Members Dialog - Desktop Layout Preserver
          ============================================================ */
       @media (max-width: 1080px) {
         /* Dialog Container */
         .notion-overlay-container [role="dialog"],
-        div[role="dialog"]:has([aria-label*="Settings" i]),
         .notion-settings-dialog,
         .notionflow-settings-dialog {
-          width: 95vw !important;
-          max-width: 95vw !important;
-          height: 88vh !important;
-          max-height: 88vh !important;
-          margin: auto !important;
-          border-radius: 18px !important;
+          max-width: 96vw !important;
+          max-height: 92vh !important;
+          border-radius: 16px !important;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7) !important;
           border: 1px solid rgba(255, 255, 255, 0.14) !important;
-          display: flex !important;
-          flex-direction: column !important;
           overflow: hidden !important;
-          background: #19191b !important;
           z-index: 100000 !important;
-        }
-
-        /* Two-pane layout adaptation (Sidebar tabs + Detail view) */
-        .notion-settings-dialog-layout,
-        [role="dialog"] > div {
-          display: flex !important;
-          flex-direction: column !important;
-          height: 100% !important;
-          max-height: 100% !important;
-          overflow: hidden !important;
-        }
-
-        /* Category navigation tab bar */
-        .notion-settings-sidebar,
-        [role="dialog"] [role="tablist"],
-        .notionflow-settings-tabs {
-          display: flex !important;
-          flex-direction: row !important;
-          overflow-x: auto !important;
-          -webkit-overflow-scrolling: touch !important;
-          white-space: nowrap !important;
-          padding: 10px 12px !important;
-          gap: 8px !important;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-          background: rgba(22, 22, 24, 0.98) !important;
-          flex-shrink: 0 !important;
-        }
-
-        /* Settings item / tab buttons */
-        .notion-settings-sidebar [role="button"],
-        .notion-settings-sidebar [role="tab"],
-        .notionflow-settings-tab {
-          padding: 8px 14px !important;
-          border-radius: 8px !important;
-          font-size: 13px !important;
-          font-weight: 500 !important;
-          color: #aaa !important;
-          cursor: pointer !important;
-          flex-shrink: 0 !important;
-        }
-
-        .notion-settings-sidebar [role="button"]:active,
-        .notionflow-settings-tab.active {
-          background: #2383e2 !important;
-          color: #fff !important;
-        }
-
-        /* Content pane */
-        .notion-settings-content,
-        [role="dialog"] [role="tabpanel"],
-        .notionflow-settings-panel {
-          flex: 1 !important;
-          overflow-y: auto !important;
-          -webkit-overflow-scrolling: touch !important;
-          padding: 18px 16px !important;
         }
 
         /* Enlarge touch targets inside settings */
@@ -109,8 +47,7 @@ export class SettingsManager {
         [role="dialog"] button,
         [role="dialog"] select,
         [role="dialog"] [role="switch"] {
-          min-height: 42px !important;
-          font-size: 14px !important;
+          min-height: 40px !important;
         }
 
         /* Close Button enhancement */
@@ -133,15 +70,15 @@ export class SettingsManager {
 
   /**
    * Opens Notion's full desktop Settings & Members dialog.
-   * Employs multi-strategy trigger:
-   * 1. Direct click on Notion's sidebar Settings button.
-   * 2. Simulated Cmd+, / Ctrl+, keyboard shortcut.
-   * 3. Fallback to simulator/standalone settings modal if present.
+   * Multi-strategy priority:
+   * 1. Direct click on Notion's desktop sidebar Settings & Members item.
+   * 2. If sidebar is collapsed, reveal sidebar and click Settings.
+   * 3. Native Notion SPA router navigation via ?openSettingsTab=account parameter.
    */
   public openFullSettings(): void {
-    console.log('[NotionFlow] Opening Notion Full Settings & Members...');
+    console.log('[NotionFlow] Opening Notion Full Desktop Settings & Members...');
 
-    // Strategy 1: Find Notion's Settings item in the DOM
+    // Strategy 1: Click "Settings & members" inside desktop sidebar
     const settingsButton = this.findNotionSettingsButton();
     if (settingsButton) {
       settingsButton.click();
@@ -149,13 +86,40 @@ export class SettingsManager {
       return;
     }
 
-    // Strategy 2: Simulate Cmd+, (Mac) or Ctrl+, (Windows)
-    const dispatched = this.dispatchShortcut();
-    if (dispatched) {
-      this.isModalOpen = true;
+    // Strategy 2: If sidebar is collapsed, reveal sidebar first and click
+    const toggleBtn = document.querySelector<HTMLElement>(
+      '[role="button"][aria-label*="sidebar" i], .notion-topbar [role="button"] svg path[d*="M2"]'
+    )?.closest('div[role="button"]') as HTMLElement | null;
+
+    if (toggleBtn && !document.querySelector('.notion-sidebar-container')) {
+      toggleBtn.click();
+      setTimeout(() => {
+        const btn = this.findNotionSettingsButton();
+        if (btn) {
+          btn.click();
+          this.isModalOpen = true;
+        }
+      }, 150);
+      return;
     }
 
-    // Strategy 3: Check for sandbox / simulator modal in index.html
+    // Strategy 3: Direct Notion SPA Router navigation via openSettingsTab query param
+    // Notion's route parser reads openSettingsTab and natively invokes (0, r(894779).Ow)
+    // which opens the full desktop settings store r(802724).Ay
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('openSettingsTab', 'account');
+      window.history.pushState({}, '', url.toString());
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      setTimeout(() => {
+        url.searchParams.delete('openSettingsTab');
+        window.history.replaceState({}, '', url.toString());
+      }, 600);
+      this.isModalOpen = true;
+      return;
+    } catch {}
+
+    // Fallback: Simulator / Sandbox modal
     const simModal = document.querySelector<HTMLElement>('#notionflow-sim-settings-modal');
     if (simModal) {
       simModal.style.display = 'flex';
@@ -203,89 +167,92 @@ export class SettingsManager {
   }
 
   private findNotionSettingsButton(): HTMLElement | null {
-    // 1. Look for explicit aria-label
-    const byAria = document.querySelector<HTMLElement>('[role="button"][aria-label*="Settings" i], [role="button"][aria-label*="Paramètres" i], [role="button"][aria-label*="Einstellungen" i]');
-    if (byAria) return byAria;
+    // CRITICAL: ONLY search inside desktop sidebar container!
+    // NEVER query document-wide for aria-label*="Settings" because mobile Notion has a mobile navigation bar with that label!
+    const sidebar = document.querySelector('.notion-sidebar-container, .notion-sidebar');
+    if (!sidebar) return null;
 
-    // 2. Query all sidebar items for "Settings" text
-    const sidebarItems = document.querySelectorAll<HTMLElement>(
-      '.notion-sidebar-container [role="button"], .notion-sidebar-container div, .notion-sidebar-item'
+    const sidebarItems = sidebar.querySelectorAll<HTMLElement>(
+      '[role="button"], div[role="button"], .notion-sidebar-item, div'
     );
     for (const item of Array.from(sidebarItems)) {
       const text = item.textContent?.trim() || '';
-      if (/settings\s*(&|and)?\s*members/i.test(text) || /^settings$/i.test(text)) {
-        const clickable = (item.closest('[role="button"]') || item) as HTMLElement;
-        return clickable;
+      if (
+        /settings\s*(&|and)?\s*members/i.test(text) ||
+        /^settings$/i.test(text) ||
+        /paramètres\s*(&|et)?\s*membres/i.test(text) ||
+        /einstellungen/i.test(text)
+      ) {
+        return (item.closest('[role="button"]') || item) as HTMLElement;
       }
     }
+
+    const byAria = sidebar.querySelector<HTMLElement>(
+      '[role="button"][aria-label*="Settings" i], [role="button"][aria-label*="Paramètres" i], [role="button"][aria-label*="Einstellungen" i]'
+    );
+    if (byAria) return byAria;
 
     return null;
   }
 
   public openNotifications(): void {
     console.log('[NotionFlow] Opening Notion Desktop Notifications / Inbox...');
+
+    // Strategy 1: Click "Inbox" or "Updates" inside desktop sidebar
     const notifBtn = this.findNotionNotificationsButton();
     if (notifBtn) {
       notifBtn.click();
       return;
     }
+
+    // Strategy 2: If sidebar is collapsed, reveal sidebar first and click
+    const toggleBtn = document.querySelector<HTMLElement>(
+      '[role="button"][aria-label*="sidebar" i], .notion-topbar [role="button"] svg path[d*="M2"]'
+    )?.closest('div[role="button"]') as HTMLElement | null;
+
+    if (toggleBtn && !document.querySelector('.notion-sidebar-container')) {
+      toggleBtn.click();
+      setTimeout(() => {
+        const btn = this.findNotionNotificationsButton();
+        if (btn) btn.click();
+      }, 150);
+      return;
+    }
+
+    // Strategy 3: Notion SPA Router navigation via openSettingsTab=notifications
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('openSettingsTab', 'notifications');
+      window.history.pushState({}, '', url.toString());
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      setTimeout(() => {
+        url.searchParams.delete('openSettingsTab');
+        window.history.replaceState({}, '', url.toString());
+      }, 600);
+    } catch {}
   }
 
   public findNotionNotificationsButton(): HTMLElement | null {
-    // 1. By aria-label
-    const byAria = document.querySelector<HTMLElement>(
-      '[role="button"][aria-label*="Updates" i], [role="button"][aria-label*="Inbox" i], [role="button"][aria-label*="Notifications" i]'
-    );
-    if (byAria) return byAria;
+    // CRITICAL: ONLY search inside desktop sidebar container!
+    const sidebar = document.querySelector('.notion-sidebar-container, .notion-sidebar');
+    if (!sidebar) return null;
 
-    // 2. Query sidebar items for "Inbox" or "Updates"
-    const sidebarItems = document.querySelectorAll<HTMLElement>(
-      '.notion-sidebar-container [role="button"], .notion-sidebar-container div, .notion-sidebar-item'
+    const sidebarItems = sidebar.querySelectorAll<HTMLElement>(
+      '[role="button"], div[role="button"], .notion-sidebar-item, div'
     );
     for (const item of Array.from(sidebarItems)) {
       const text = item.textContent?.trim() || '';
       if (/^(inbox|updates|notifications)$/i.test(text) || /updates\s*(&|and)?\s*inbox/i.test(text)) {
-        const clickable = (item.closest('[role="button"]') || item) as HTMLElement;
-        return clickable;
+        return (item.closest('[role="button"]') || item) as HTMLElement;
       }
     }
+
+    const byAria = sidebar.querySelector<HTMLElement>(
+      '[role="button"][aria-label*="Updates" i], [role="button"][aria-label*="Inbox" i], [role="button"][aria-label*="Notifications" i]'
+    );
+    if (byAria) return byAria;
+
     return null;
-  }
-
-  private dispatchShortcut(): boolean {
-    const target = document.activeElement || document.body || document.documentElement || window;
-
-    // Mac Cmd+, event
-    const evtMac = new KeyboardEvent('keydown', {
-      key: ',',
-      code: 'Comma',
-      keyCode: 188,
-      which: 188,
-      metaKey: true,
-      ctrlKey: false,
-      bubbles: true,
-      cancelable: true,
-    });
-    target.dispatchEvent(evtMac);
-    window.dispatchEvent(evtMac);
-    document.dispatchEvent(evtMac);
-
-    // Windows/Linux Ctrl+, event fallback
-    const evtWin = new KeyboardEvent('keydown', {
-      key: ',',
-      code: 'Comma',
-      keyCode: 188,
-      which: 188,
-      metaKey: false,
-      ctrlKey: true,
-      bubbles: true,
-      cancelable: true,
-    });
-    target.dispatchEvent(evtWin);
-    window.dispatchEvent(evtWin);
-    document.dispatchEvent(evtWin);
-
-    return true;
   }
 
   private observeSettingsDialog(): void {
@@ -298,7 +265,6 @@ export class SettingsManager {
         const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
         if (dialog && !dialog.classList.contains('notionflow-settings-enhanced')) {
           dialog.classList.add('notionflow-settings-enhanced');
-          // Ensure scroll elasticity on iOS
           dialog.style.setProperty('-webkit-overflow-scrolling', 'touch');
         }
       });
@@ -315,14 +281,6 @@ export class SettingsManager {
         this.closeSettings();
       } else if (target?.id === 'notionflow-sim-settings-modal') {
         this.closeSettings();
-      }
-    });
-
-    // Global keyboard shortcut: Cmd+, (Mac/iOS) or Ctrl+, (Windows/Linux)
-    document.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && (e.key === ',' || e.code === 'Comma')) {
-        e.preventDefault();
-        this.toggleSettings();
       }
     });
   }

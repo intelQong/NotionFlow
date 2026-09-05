@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         NotionFlow - Desktop Superpowers on Mobile iOS
 // @namespace    https://github.com/intelQong/NotionFlow
-// @version      1.3.2
+// @version      1.3.3
 // @description  Forces desktop Notion on iOS with dynamic UI/UX adaptation: snap carousels, sticky table headers, touch handles, and floating toolbar.
 // @author       intelQong
 // @updateURL    https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js
@@ -15,8 +15,7 @@
 // @match        https://*.notion.site/*
 // @noframes
 // @run-at       document-start
-// @grant        GM_xmlhttpRequest
-// @grant        GM.xmlHttpRequest
+// @grant        none
 // ==/UserScript==
 
 "use strict";
@@ -1271,82 +1270,20 @@
       style.id = "notionflow-settings-styles";
       style.textContent = `
       /* ============================================================
-         Notion Settings & Members Dialog - Mobile Responsive Engine
+         Notion Settings & Members Dialog - Desktop Layout Preserver
          ============================================================ */
       @media (max-width: 1080px) {
         /* Dialog Container */
         .notion-overlay-container [role="dialog"],
-        div[role="dialog"]:has([aria-label*="Settings" i]),
         .notion-settings-dialog,
         .notionflow-settings-dialog {
-          width: 95vw !important;
-          max-width: 95vw !important;
-          height: 88vh !important;
-          max-height: 88vh !important;
-          margin: auto !important;
-          border-radius: 18px !important;
+          max-width: 96vw !important;
+          max-height: 92vh !important;
+          border-radius: 16px !important;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7) !important;
           border: 1px solid rgba(255, 255, 255, 0.14) !important;
-          display: flex !important;
-          flex-direction: column !important;
           overflow: hidden !important;
-          background: #19191b !important;
           z-index: 100000 !important;
-        }
-
-        /* Two-pane layout adaptation (Sidebar tabs + Detail view) */
-        .notion-settings-dialog-layout,
-        [role="dialog"] > div {
-          display: flex !important;
-          flex-direction: column !important;
-          height: 100% !important;
-          max-height: 100% !important;
-          overflow: hidden !important;
-        }
-
-        /* Category navigation tab bar */
-        .notion-settings-sidebar,
-        [role="dialog"] [role="tablist"],
-        .notionflow-settings-tabs {
-          display: flex !important;
-          flex-direction: row !important;
-          overflow-x: auto !important;
-          -webkit-overflow-scrolling: touch !important;
-          white-space: nowrap !important;
-          padding: 10px 12px !important;
-          gap: 8px !important;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-          background: rgba(22, 22, 24, 0.98) !important;
-          flex-shrink: 0 !important;
-        }
-
-        /* Settings item / tab buttons */
-        .notion-settings-sidebar [role="button"],
-        .notion-settings-sidebar [role="tab"],
-        .notionflow-settings-tab {
-          padding: 8px 14px !important;
-          border-radius: 8px !important;
-          font-size: 13px !important;
-          font-weight: 500 !important;
-          color: #aaa !important;
-          cursor: pointer !important;
-          flex-shrink: 0 !important;
-        }
-
-        .notion-settings-sidebar [role="button"]:active,
-        .notionflow-settings-tab.active {
-          background: #2383e2 !important;
-          color: #fff !important;
-        }
-
-        /* Content pane */
-        .notion-settings-content,
-        [role="dialog"] [role="tabpanel"],
-        .notionflow-settings-panel {
-          flex: 1 !important;
-          overflow-y: auto !important;
-          -webkit-overflow-scrolling: touch !important;
-          padding: 18px 16px !important;
         }
 
         /* Enlarge touch targets inside settings */
@@ -1354,8 +1291,7 @@
         [role="dialog"] button,
         [role="dialog"] select,
         [role="dialog"] [role="switch"] {
-          min-height: 42px !important;
-          font-size: 14px !important;
+          min-height: 40px !important;
         }
 
         /* Close Button enhancement */
@@ -1377,22 +1313,45 @@
     }
     /**
      * Opens Notion's full desktop Settings & Members dialog.
-     * Employs multi-strategy trigger:
-     * 1. Direct click on Notion's sidebar Settings button.
-     * 2. Simulated Cmd+, / Ctrl+, keyboard shortcut.
-     * 3. Fallback to simulator/standalone settings modal if present.
+     * Multi-strategy priority:
+     * 1. Direct click on Notion's desktop sidebar Settings & Members item.
+     * 2. If sidebar is collapsed, reveal sidebar and click Settings.
+     * 3. Native Notion SPA router navigation via ?openSettingsTab=account parameter.
      */
     openFullSettings() {
-      console.log("[NotionFlow] Opening Notion Full Settings & Members...");
+      console.log("[NotionFlow] Opening Notion Full Desktop Settings & Members...");
       const settingsButton = this.findNotionSettingsButton();
       if (settingsButton) {
         settingsButton.click();
         this.isModalOpen = true;
         return;
       }
-      const dispatched = this.dispatchShortcut();
-      if (dispatched) {
+      const toggleBtn = document.querySelector(
+        '[role="button"][aria-label*="sidebar" i], .notion-topbar [role="button"] svg path[d*="M2"]'
+      )?.closest('div[role="button"]');
+      if (toggleBtn && !document.querySelector(".notion-sidebar-container")) {
+        toggleBtn.click();
+        setTimeout(() => {
+          const btn = this.findNotionSettingsButton();
+          if (btn) {
+            btn.click();
+            this.isModalOpen = true;
+          }
+        }, 150);
+        return;
+      }
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set("openSettingsTab", "account");
+        window.history.pushState({}, "", url.toString());
+        window.dispatchEvent(new PopStateEvent("popstate"));
+        setTimeout(() => {
+          url.searchParams.delete("openSettingsTab");
+          window.history.replaceState({}, "", url.toString());
+        }, 600);
         this.isModalOpen = true;
+        return;
+      } catch {
       }
       const simModal = document.querySelector("#notionflow-sim-settings-modal");
       if (simModal) {
@@ -1434,18 +1393,21 @@
       return this.isModalOpen || Boolean(dialog && dialog.clientHeight > 100 || simModal && simModal.style.display !== "none");
     }
     findNotionSettingsButton() {
-      const byAria = document.querySelector('[role="button"][aria-label*="Settings" i], [role="button"][aria-label*="Param\xE8tres" i], [role="button"][aria-label*="Einstellungen" i]');
-      if (byAria) return byAria;
-      const sidebarItems = document.querySelectorAll(
-        '.notion-sidebar-container [role="button"], .notion-sidebar-container div, .notion-sidebar-item'
+      const sidebar = document.querySelector(".notion-sidebar-container, .notion-sidebar");
+      if (!sidebar) return null;
+      const sidebarItems = sidebar.querySelectorAll(
+        '[role="button"], div[role="button"], .notion-sidebar-item, div'
       );
       for (const item of Array.from(sidebarItems)) {
         const text = item.textContent?.trim() || "";
-        if (/settings\s*(&|and)?\s*members/i.test(text) || /^settings$/i.test(text)) {
-          const clickable = item.closest('[role="button"]') || item;
-          return clickable;
+        if (/settings\s*(&|and)?\s*members/i.test(text) || /^settings$/i.test(text) || /paramètres\s*(&|et)?\s*membres/i.test(text) || /einstellungen/i.test(text)) {
+          return item.closest('[role="button"]') || item;
         }
       }
+      const byAria = sidebar.querySelector(
+        '[role="button"][aria-label*="Settings" i], [role="button"][aria-label*="Param\xE8tres" i], [role="button"][aria-label*="Einstellungen" i]'
+      );
+      if (byAria) return byAria;
       return null;
     }
     openNotifications() {
@@ -1455,53 +1417,46 @@
         notifBtn.click();
         return;
       }
+      const toggleBtn = document.querySelector(
+        '[role="button"][aria-label*="sidebar" i], .notion-topbar [role="button"] svg path[d*="M2"]'
+      )?.closest('div[role="button"]');
+      if (toggleBtn && !document.querySelector(".notion-sidebar-container")) {
+        toggleBtn.click();
+        setTimeout(() => {
+          const btn = this.findNotionNotificationsButton();
+          if (btn) btn.click();
+        }, 150);
+        return;
+      }
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set("openSettingsTab", "notifications");
+        window.history.pushState({}, "", url.toString());
+        window.dispatchEvent(new PopStateEvent("popstate"));
+        setTimeout(() => {
+          url.searchParams.delete("openSettingsTab");
+          window.history.replaceState({}, "", url.toString());
+        }, 600);
+      } catch {
+      }
     }
     findNotionNotificationsButton() {
-      const byAria = document.querySelector(
-        '[role="button"][aria-label*="Updates" i], [role="button"][aria-label*="Inbox" i], [role="button"][aria-label*="Notifications" i]'
-      );
-      if (byAria) return byAria;
-      const sidebarItems = document.querySelectorAll(
-        '.notion-sidebar-container [role="button"], .notion-sidebar-container div, .notion-sidebar-item'
+      const sidebar = document.querySelector(".notion-sidebar-container, .notion-sidebar");
+      if (!sidebar) return null;
+      const sidebarItems = sidebar.querySelectorAll(
+        '[role="button"], div[role="button"], .notion-sidebar-item, div'
       );
       for (const item of Array.from(sidebarItems)) {
         const text = item.textContent?.trim() || "";
         if (/^(inbox|updates|notifications)$/i.test(text) || /updates\s*(&|and)?\s*inbox/i.test(text)) {
-          const clickable = item.closest('[role="button"]') || item;
-          return clickable;
+          return item.closest('[role="button"]') || item;
         }
       }
+      const byAria = sidebar.querySelector(
+        '[role="button"][aria-label*="Updates" i], [role="button"][aria-label*="Inbox" i], [role="button"][aria-label*="Notifications" i]'
+      );
+      if (byAria) return byAria;
       return null;
-    }
-    dispatchShortcut() {
-      const target = document.activeElement || document.body || document.documentElement || window;
-      const evtMac = new KeyboardEvent("keydown", {
-        key: ",",
-        code: "Comma",
-        keyCode: 188,
-        which: 188,
-        metaKey: true,
-        ctrlKey: false,
-        bubbles: true,
-        cancelable: true
-      });
-      target.dispatchEvent(evtMac);
-      window.dispatchEvent(evtMac);
-      document.dispatchEvent(evtMac);
-      const evtWin = new KeyboardEvent("keydown", {
-        key: ",",
-        code: "Comma",
-        keyCode: 188,
-        which: 188,
-        metaKey: false,
-        ctrlKey: true,
-        bubbles: true,
-        cancelable: true
-      });
-      target.dispatchEvent(evtWin);
-      window.dispatchEvent(evtWin);
-      document.dispatchEvent(evtWin);
-      return true;
     }
     observeSettingsDialog() {
       let checkQueued = false;
@@ -1528,17 +1483,11 @@
           this.closeSettings();
         }
       });
-      document.addEventListener("keydown", (e) => {
-        if ((e.metaKey || e.ctrlKey) && (e.key === "," || e.code === "Comma")) {
-          e.preventDefault();
-          this.toggleSettings();
-        }
-      });
     }
   };
 
   // src/engine/updater.ts
-  var NOTIONFLOW_VERSION = "1.3.2";
+  var NOTIONFLOW_VERSION = "1.3.3";
   var NOTIONFLOW_RAW_URL = "https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js";
   var UpdateChecker = class {
     lastCheckKey = "notionflow_last_update_check";
