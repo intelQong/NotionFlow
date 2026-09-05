@@ -106,11 +106,17 @@ Choose either quick method:
   - **History**: Quick undo and redo actions.
   - **New Page**: Instant `Cmd+N` document creation.
 
-### ⌨️ 6. Virtual Keyboard Markdown Accessory Bar
+### ⚙️ 6. Instant Access to Notion Full Settings & Members
+- The official Notion mobile app strips or blocks workspace administrative settings (Members, Roles, Billing, Public Sites, Connections, Security, Export).
+- NotionFlow provides **1-tap access to Notion's full desktop Settings & Members** modal directly via the ⚙️ FAB button or `Cmd+,`:
+  - Manage workspace identity, members, billing tiers, domain routing, and integrations on iPhone/iPad.
+  - Dynamically adapts Notion's desktop settings dialog for mobile screens with touch-friendly tabs and responsive layouts.
+
+### ⌨️ 7. Virtual Keyboard Markdown Accessory Bar
 - Automatically docks directly above the virtual keyboard whenever an editable block gains focus.
 - One-tap buttons for `#` (H1), `##` (H2), `###` (H3), `[ ]` (To-Do), `•` (Bullet list), `1.` (Numbered list), `**Bold**`, `*Italic*`, `Code`, `/` (Slash command), and indent/outdent (`Tab` / `Shift+Tab`).
 
-### 🖤 7. OLED True Black & Safe Area Insets
+### 🖤 8. OLED True Black & Safe Area Insets
 - High-contrast true OLED `#000000` dark theme overrides.
 - Full compatibility with iOS Dynamic Island, notch geometries, and Home Indicator insets.
 

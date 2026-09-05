@@ -1032,12 +1032,247 @@
     }
   };
 
+  // src/engine/settings.ts
+  var SettingsManager = class {
+    isModalOpen = false;
+    constructor() {
+      this.injectStyles();
+    }
+    init() {
+      this.observeSettingsDialog();
+      this.setupModalDismissListeners();
+    }
+    injectStyles() {
+      if (document.getElementById("notionflow-settings-styles")) return;
+      const style = document.createElement("style");
+      style.id = "notionflow-settings-styles";
+      style.textContent = `
+      /* ============================================================
+         Notion Settings & Members Dialog - Mobile Responsive Engine
+         ============================================================ */
+      @media (max-width: 768px) {
+        /* Dialog Container */
+        .notion-overlay-container [role="dialog"],
+        div[role="dialog"]:has([aria-label*="Settings" i]),
+        .notion-settings-dialog,
+        .notionflow-settings-dialog {
+          width: 95vw !important;
+          max-width: 95vw !important;
+          height: 88vh !important;
+          max-height: 88vh !important;
+          margin: auto !important;
+          border-radius: 18px !important;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7) !important;
+          border: 1px solid rgba(255, 255, 255, 0.14) !important;
+          display: flex !important;
+          flex-direction: column !important;
+          overflow: hidden !important;
+          background: #19191b !important;
+          z-index: 100000 !important;
+        }
+
+        /* Two-pane layout adaptation (Sidebar tabs + Detail view) */
+        .notion-settings-dialog-layout,
+        [role="dialog"] > div {
+          display: flex !important;
+          flex-direction: column !important;
+          height: 100% !important;
+          max-height: 100% !important;
+          overflow: hidden !important;
+        }
+
+        /* Category navigation tab bar */
+        .notion-settings-sidebar,
+        [role="dialog"] [role="tablist"],
+        .notionflow-settings-tabs {
+          display: flex !important;
+          flex-direction: row !important;
+          overflow-x: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+          white-space: nowrap !important;
+          padding: 10px 12px !important;
+          gap: 8px !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+          background: rgba(22, 22, 24, 0.98) !important;
+          flex-shrink: 0 !important;
+        }
+
+        /* Settings item / tab buttons */
+        .notion-settings-sidebar [role="button"],
+        .notion-settings-sidebar [role="tab"],
+        .notionflow-settings-tab {
+          padding: 8px 14px !important;
+          border-radius: 8px !important;
+          font-size: 13px !important;
+          font-weight: 500 !important;
+          color: #aaa !important;
+          cursor: pointer !important;
+          flex-shrink: 0 !important;
+        }
+
+        .notion-settings-sidebar [role="button"]:active,
+        .notionflow-settings-tab.active {
+          background: #2383e2 !important;
+          color: #fff !important;
+        }
+
+        /* Content pane */
+        .notion-settings-content,
+        [role="dialog"] [role="tabpanel"],
+        .notionflow-settings-panel {
+          flex: 1 !important;
+          overflow-y: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+          padding: 18px 16px !important;
+        }
+
+        /* Enlarge touch targets inside settings */
+        [role="dialog"] input,
+        [role="dialog"] button,
+        [role="dialog"] select,
+        [role="dialog"] [role="switch"] {
+          min-height: 42px !important;
+          font-size: 14px !important;
+        }
+
+        /* Close Button enhancement */
+        .notionflow-settings-close-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.1);
+          border: none;
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+      }
+    `;
+      document.head.appendChild(style);
+    }
+    /**
+     * Opens Notion's full desktop Settings & Members dialog.
+     * Employs multi-strategy trigger:
+     * 1. Direct click on Notion's sidebar Settings button.
+     * 2. Simulated Cmd+, / Ctrl+, keyboard shortcut.
+     * 3. Fallback to simulator/standalone settings modal if present.
+     */
+    openFullSettings() {
+      console.log("[NotionFlow] Opening Notion Full Settings & Members...");
+      const settingsButton = this.findNotionSettingsButton();
+      if (settingsButton) {
+        settingsButton.click();
+        this.isModalOpen = true;
+        return;
+      }
+      const dispatched = this.dispatchShortcut();
+      if (dispatched) {
+        this.isModalOpen = true;
+      }
+      const simModal = document.querySelector("#notionflow-sim-settings-modal");
+      if (simModal) {
+        simModal.style.display = "flex";
+        this.isModalOpen = true;
+      }
+    }
+    /**
+     * Closes the settings modal via Escape or clicking close button.
+     */
+    closeSettings() {
+      const escEvt = new KeyboardEvent("keydown", {
+        key: "Escape",
+        code: "Escape",
+        keyCode: 27,
+        which: 27,
+        bubbles: true,
+        cancelable: true
+      });
+      document.dispatchEvent(escEvt);
+      const closeBtn = document.querySelector(
+        '[role="dialog"] [aria-label*="Close" i], [role="dialog"] button:has(svg)'
+      );
+      if (closeBtn) closeBtn.click();
+      const simModal = document.querySelector("#notionflow-sim-settings-modal");
+      if (simModal) simModal.style.display = "none";
+      this.isModalOpen = false;
+    }
+    toggleSettings() {
+      if (this.isOpen()) {
+        this.closeSettings();
+      } else {
+        this.openFullSettings();
+      }
+    }
+    isOpen() {
+      const dialog = document.querySelector('[role="dialog"]');
+      const simModal = document.querySelector("#notionflow-sim-settings-modal");
+      return this.isModalOpen || Boolean(dialog && dialog.clientHeight > 100 || simModal && simModal.style.display !== "none");
+    }
+    findNotionSettingsButton() {
+      const byAria = document.querySelector('[role="button"][aria-label*="Settings" i], [role="button"][aria-label*="Param\xE8tres" i], [role="button"][aria-label*="Einstellungen" i]');
+      if (byAria) return byAria;
+      const sidebarItems = document.querySelectorAll(
+        '.notion-sidebar-container [role="button"], .notion-sidebar-container div, .notion-sidebar-item'
+      );
+      for (const item of Array.from(sidebarItems)) {
+        const text = item.textContent?.trim() || "";
+        if (/settings\s*(&|and)?\s*members/i.test(text) || /^settings$/i.test(text)) {
+          const clickable = item.closest('[role="button"]') || item;
+          return clickable;
+        }
+      }
+      return null;
+    }
+    dispatchShortcut() {
+      const keyEventInit = {
+        key: ",",
+        code: "Comma",
+        metaKey: true,
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true
+      };
+      const evt = new KeyboardEvent("keydown", keyEventInit);
+      const target = document.activeElement || document.body;
+      return target.dispatchEvent(evt);
+    }
+    observeSettingsDialog() {
+      const observer = new MutationObserver(() => {
+        const dialog = document.querySelector('[role="dialog"]');
+        if (dialog && !dialog.classList.contains("notionflow-settings-enhanced")) {
+          dialog.classList.add("notionflow-settings-enhanced");
+          dialog.style.setProperty("-webkit-overflow-scrolling", "touch");
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+    setupModalDismissListeners() {
+      document.addEventListener("click", (e) => {
+        const target = e.target;
+        if (target?.closest("#notionflow-close-settings-modal")) {
+          this.closeSettings();
+        } else if (target?.id === "notionflow-sim-settings-modal") {
+          this.closeSettings();
+        }
+      });
+      document.addEventListener("keydown", (e) => {
+        if ((e.metaKey || e.ctrlKey) && (e.key === "," || e.code === "Comma")) {
+          e.preventDefault();
+          this.toggleSettings();
+        }
+      });
+    }
+  };
+
   // src/ui/floating-bar.ts
   var FloatingBar = class {
-    constructor(viewport, sidebar, carousel) {
+    constructor(viewport, sidebar, carousel, settings) {
       this.viewport = viewport;
       this.sidebar = sidebar;
       this.carousel = carousel;
+      this.settings = settings;
       this.injectStyles();
     }
     container = null;
@@ -1060,7 +1295,7 @@
         display: flex;
         align-items: center;
         gap: 6px;
-        background: rgba(22, 22, 24, 0.82);
+        background: rgba(22, 22, 24, 0.84);
         backdrop-filter: blur(24px) saturate(180%);
         -webkit-backdrop-filter: blur(24px) saturate(180%);
         border: 1px solid rgba(255, 255, 255, 0.16);
@@ -1069,6 +1304,23 @@
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
         transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         user-select: none;
+      }
+
+      @media (max-width: 420px) {
+        .notionflow-fab-container {
+          gap: 3px;
+          padding: 4px 6px;
+          bottom: 14px;
+          max-width: 96vw;
+        }
+        .notionflow-fab-btn {
+          width: 36px !important;
+          height: 36px !important;
+        }
+        .notionflow-fab-btn svg {
+          width: 16px !important;
+          height: 16px !important;
+        }
       }
 
       .notionflow-fab-container.collapsed {
@@ -1083,8 +1335,8 @@
       }
 
       .notionflow-fab-btn {
-        width: 40px;
-        height: 40px;
+        width: 38px;
+        height: 38px;
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.08);
         border: none;
@@ -1114,27 +1366,28 @@
 
       .notionflow-fab-divider {
         width: 1px;
-        height: 22px;
+        height: 20px;
         background: rgba(255, 255, 255, 0.15);
-        margin: 0 2px;
+        margin: 0 1px;
       }
 
-      /* Zoom Popover Menu */
+      /* Zoom & Preferences Popover Menu */
       .notionflow-zoom-popover {
         position: absolute;
-        bottom: 56px;
+        bottom: 54px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(26, 26, 28, 0.95);
+        background: rgba(24, 24, 26, 0.96);
         backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.16);
         border-radius: 16px;
         padding: 12px 14px;
         display: none;
         flex-direction: column;
         gap: 10px;
-        min-width: 210px;
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+        min-width: 220px;
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6);
       }
 
       .notionflow-zoom-popover.visible {
@@ -1158,7 +1411,7 @@
 
       .notionflow-zoom-presets {
         display: flex;
-        gap: 6px;
+        gap: 5px;
       }
 
       .notionflow-zoom-preset-btn {
@@ -1185,7 +1438,7 @@
       this.container.className = "notionflow-fab-container";
       this.container.innerHTML = `
       <!-- Sidebar Toggle -->
-      <button class="notionflow-fab-btn" id="notionflow-btn-sidebar" title="Toggle Sidebar">
+      <button class="notionflow-fab-btn" id="notionflow-btn-sidebar" title="Toggle Sidebar (Cmd+\\)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
       </button>
 
@@ -1194,33 +1447,36 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       </button>
 
+      <!-- Notion Full Settings (Cmd+,) -->
+      <button class="notionflow-fab-btn" id="notionflow-btn-settings" title="Notion Settings & Members (Cmd+,)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+
       <!-- New Page (Cmd+N) -->
-      <button class="notionflow-fab-btn" id="notionflow-btn-new" title="New Page">
+      <button class="notionflow-fab-btn" id="notionflow-btn-new" title="New Page (Cmd+N)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
       </button>
 
       <div class="notionflow-fab-divider"></div>
 
       <!-- Undo -->
-      <button class="notionflow-fab-btn" id="notionflow-btn-undo" title="Undo">
+      <button class="notionflow-fab-btn" id="notionflow-btn-undo" title="Undo (Cmd+Z)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
       </button>
 
-      <!-- Redo -->
-      <button class="notionflow-fab-btn" id="notionflow-btn-redo" title="Redo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
-      </button>
-
-      <!-- Zoom Menu Trigger -->
+      <!-- Zoom & Settings Trigger -->
       <div style="position: relative;">
-        <button class="notionflow-fab-btn" id="notionflow-btn-zoom" title="Zoom & Scaling">
+        <button class="notionflow-fab-btn" id="notionflow-btn-zoom" title="Scale & Preferences">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
         </button>
 
-        <!-- Zoom Popover -->
+        <!-- Popover -->
         <div class="notionflow-zoom-popover" id="notionflow-zoom-menu">
           <div class="notionflow-zoom-row">
-            <span>Scale Level</span>
+            <span>Viewport Zoom</span>
             <span id="notionflow-zoom-text">${this.viewport.getZoom()}%</span>
           </div>
           <input type="range" id="notionflow-zoom-slider" min="60" max="140" step="5" value="${this.viewport.getZoom()}" style="width: 100%; accent-color: #2383e2;">
@@ -1231,6 +1487,13 @@
             <button class="notionflow-zoom-preset-btn" data-zoom="115">115%</button>
             <button class="notionflow-zoom-preset-btn" data-zoom="130">130%</button>
           </div>
+
+          <div style="height: 1px; background: rgba(255, 255, 255, 0.1); margin: 4px 0;"></div>
+
+          <button id="notionflow-popover-open-settings" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px; background: rgba(35, 131, 226, 0.15); border: 1px solid rgba(35, 131, 226, 0.4); color: #58a6ff; border-radius: 8px; padding: 7px 10px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Full Settings & Members
+          </button>
         </div>
       </div>
 
@@ -1257,16 +1520,15 @@
         const evt = new KeyboardEvent("keydown", { key: "p", code: "KeyP", metaKey: true, bubbles: true });
         document.dispatchEvent(evt);
       });
+      this.container?.querySelector("#notionflow-btn-settings")?.addEventListener("click", () => {
+        this.settings.toggleSettings();
+      });
       this.container?.querySelector("#notionflow-btn-new")?.addEventListener("click", () => {
         const evt = new KeyboardEvent("keydown", { key: "n", code: "KeyN", metaKey: true, bubbles: true });
         document.dispatchEvent(evt);
       });
       this.container?.querySelector("#notionflow-btn-undo")?.addEventListener("click", () => {
         const evt = new KeyboardEvent("keydown", { key: "z", code: "KeyZ", metaKey: true, bubbles: true });
-        document.dispatchEvent(evt);
-      });
-      this.container?.querySelector("#notionflow-btn-redo")?.addEventListener("click", () => {
-        const evt = new KeyboardEvent("keydown", { key: "z", code: "KeyZ", metaKey: true, shiftKey: true, bubbles: true });
         document.dispatchEvent(evt);
       });
       const zoomBtn = this.container?.querySelector("#notionflow-btn-zoom");
@@ -1283,6 +1545,11 @@
           this.zoomMenuOpen = false;
           zoomMenu?.classList.remove("visible");
         }
+      });
+      this.container?.querySelector("#notionflow-popover-open-settings")?.addEventListener("click", () => {
+        this.zoomMenuOpen = false;
+        zoomMenu?.classList.remove("visible");
+        this.settings.openFullSettings();
       });
       zoomSlider?.addEventListener("input", () => {
         const val = parseInt(zoomSlider.value, 10);
@@ -1326,15 +1593,17 @@
         const touchHandles = new TouchHandlesManager();
         const sidebar = new SidebarDrawerManager();
         const keyboard = new KeyboardToolbarManager();
-        const floatingBar = new FloatingBar(viewport, sidebar, carousel);
+        const settings = new SettingsManager();
+        const floatingBar = new FloatingBar(viewport, sidebar, carousel, settings);
         viewport.init();
         carousel.init();
         database.init();
         touchHandles.init();
         sidebar.init();
         keyboard.init();
+        settings.init();
         floatingBar.init();
-        console.log("[NotionFlow Userscript] All systems operational \u{1F680}");
+        console.log("[NotionFlow Userscript] All systems operational with Full Settings access \u{1F680}");
       } catch (err) {
         console.error("[NotionFlow Userscript] Initialization error:", err);
       }

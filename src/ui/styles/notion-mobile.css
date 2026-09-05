@@ -146,3 +146,68 @@ html, body {
     background-color: #121214 !important;
   }
 }
+
+/* ==========================================================================
+   7. Notion Full Settings & Members Dialog Responsive Adaptation
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* Ensure full settings modal fits comfortably on mobile screens */
+  .notion-overlay-container [role="dialog"],
+  div[role="dialog"]:has([aria-label*="Settings" i]),
+  .notion-settings-dialog,
+  .notionflow-settings-dialog {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    height: 88vh !important;
+    max-height: 88vh !important;
+    border-radius: 18px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.75) !important;
+  }
+
+  /* Two-pane layout converts to responsive stack */
+  .notion-settings-dialog-layout,
+  [role="dialog"] > div:has(> div > div) {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  /* Category tabs horizontal scroll bar */
+  .notion-settings-sidebar,
+  [role="dialog"] [role="tablist"],
+  .notionflow-settings-tabs {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    white-space: nowrap !important;
+    padding: 10px 12px !important;
+    gap: 8px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgba(22, 22, 24, 0.98) !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Settings pane content scrolling */
+  .notion-settings-content,
+  [role="dialog"] [role="tabpanel"],
+  .notionflow-settings-panel {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 16px !important;
+  }
+
+  /* Form controls touch sizing */
+  [role="dialog"] input,
+  [role="dialog"] button,
+  [role="dialog"] select {
+    min-height: 40px !important;
+    font-size: 14px !important;
+  }
+}
+
