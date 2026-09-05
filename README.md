@@ -4,7 +4,6 @@
 
 ### *Desktop-Class Notion Superpowers on Mobile WebKit via Lightweight Userscript.*
 
-[![Build Status](https://github.com/intelQong/NotionFlow/actions/workflows/build.yml/badge.svg)](https://github.com/intelQong/NotionFlow/actions/workflows/build.yml)
 [![Latest Release](https://img.shields.io/github/v/release/intelQong/NotionFlow?color=007AFF&logo=apple&logoColor=white&label=Release)](https://github.com/intelQong/NotionFlow/releases)
 [![iOS Compatibility](https://img.shields.io/badge/iOS-16.0%2B-000000?logo=apple&logoColor=white)](https://apple.com/ios)
 [![Safari Extension](https://img.shields.io/badge/Safari-Userscript-FF9500?logo=safari&logoColor=white)](https://apps.apple.com/app/userscripts/id1463298887)
