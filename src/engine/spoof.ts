@@ -58,36 +58,15 @@ export function initSpoofing(): void {
     overrideProp(t, 'userAgentData', () => uad);
   }
 
-  // 3. Spoof Screen Dimensions and Window Outer Bounds
-  // Notion checks window.screen.width (< 768) or outerWidth to trigger mobile routes for Settings and Notifications.
-  // Spoofing screen.width to 1440 forces Notion to render the desktop dialogs instead of mobile views.
-  const screenTargets = [Screen.prototype, window.screen];
-  for (const t of screenTargets) {
-    overrideProp(t, 'width', () => 1440);
-    overrideProp(t, 'availWidth', () => 1440);
-    overrideProp(t, 'height', () => 900);
-    overrideProp(t, 'availHeight', () => 900);
-    overrideProp(t, 'colorDepth', () => 24);
-    overrideProp(t, 'pixelDepth', () => 24);
-  }
-
-  overrideProp(window, 'outerWidth', () => 1440);
-  overrideProp(window, 'outerHeight', () => 900);
-  overrideProp(window, 'orientation', () => undefined);
-
-  // 4. Override matchMedia for mouse pointer, hover, and standalone display mode
+  // 3. MatchMedia overrides for desktop hover and fine pointer capability
   try {
     const origMatchMedia = window.matchMedia;
     if (origMatchMedia) {
       window.matchMedia = function (query: string): MediaQueryList {
         const mql = origMatchMedia.call(window, query);
-        if (/pointer:\s*coarse/i.test(query) || /hover:\s*none/i.test(query) || /display-mode:\s*standalone/i.test(query)) {
+        if (/display-mode:\s*standalone/i.test(query)) {
           try {
             Object.defineProperty(mql, 'matches', { get: () => false, configurable: true });
-          } catch {}
-        } else if (/pointer:\s*fine/i.test(query) || /hover:\s*hover/i.test(query)) {
-          try {
-            Object.defineProperty(mql, 'matches', { get: () => true, configurable: true });
           } catch {}
         }
         return mql;
@@ -187,8 +166,9 @@ export function initSpoofing(): void {
     } catch {}
 
     // Suppress "Open in Notion app" bottom sheets, banners, and mobile promotional overlays
+    // and provide responsive desktop styling for iOS & iPadOS
     const style = document.createElement('style');
-    style.id = 'notionflow-anti-mobile-banner';
+    style.id = 'notionflow-desktop-styles';
     style.textContent = `
       /* Hide Notion native mobile promotional banners & headers */
       .notion-mobile-app-banner,
@@ -203,8 +183,49 @@ export function initSpoofing(): void {
         visibility: hidden !important;
         pointer-events: none !important;
       }
+
+      /* Responsive Desktop Modals (Settings & Members, Share, Quick Find) */
+      @media (max-width: 1080px) {
+        .notion-overlay-container [role="dialog"],
+        .notion-settings-dialog {
+          width: 96vw !important;
+          max-width: 96vw !important;
+          height: 90vh !important;
+          max-height: 90vh !important;
+          margin: auto !important;
+          border-radius: 16px !important;
+          overflow: hidden !important;
+        }
+      }
+
+      /* Off-canvas slide-over drawer for desktop sidebar on narrow screens (< 768px) */
+      @media (max-width: 768px) {
+        .notion-sidebar-container {
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          bottom: 0 !important;
+          height: 100vh !important;
+          width: 280px !important;
+          max-width: 80vw !important;
+          z-index: 9999 !important;
+          box-shadow: 4px 0 25px rgba(0, 0, 0, 0.4) !important;
+        }
+        .notion-frame {
+          width: 100% !important;
+          max-width: 100vw !important;
+          padding-left: 0 !important;
+        }
+      }
+
+      /* Smooth momentum scrolling for wide database tables, boards, and timelines */
+      .notion-table-view,
+      .notion-board-view,
+      .notion-timeline-view {
+        -webkit-overflow-scrolling: touch !important;
+      }
     `;
-    if (!document.getElementById('notionflow-anti-mobile-banner')) {
+    if (!document.getElementById('notionflow-desktop-styles')) {
       safeAppend(style);
     }
   };
@@ -225,7 +246,7 @@ export function initSpoofing(): void {
     });
   } catch {}
 
-  // 8. Intercept window.open targeting mobile redirects
+  // 9. Intercept window.open targeting mobile redirects
   const originalOpen = window.open;
   window.open = function (url?: string | URL, target?: string, features?: string): Window | null {
     if (typeof url === 'string') {
@@ -237,5 +258,5 @@ export function initSpoofing(): void {
     return originalOpen.call(window, url, target, features);
   };
 
-  console.log('[NotionFlow] Full Desktop Spoofing Active (MacIntel, Desktop UA, Screen 1440, Pointer Fine) 🖥️');
+  console.log('[NotionFlow] Full Desktop Mode Active on iOS & iPadOS 🖥️');
 }

@@ -7,10 +7,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const banner = `// ==UserScript==
-// @name         NotionFlow - Desktop Superpowers on Mobile iOS
+// @name         NotionFlow - Desktop Mode for iOS & iPadOS
 // @namespace    https://github.com/intelQong/NotionFlow
-// @version      1.3.4
-// @description  Forces desktop Notion on iOS with dynamic UI/UX adaptation: snap carousels, sticky table headers, touch handles, and floating toolbar.
+// @version      1.4.0
+// @description  Forces full desktop Notion on iOS and iPadOS with responsive sidebars, modals, and smooth touch scrolling.
 // @author       intelQong
 // @updateURL    https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js
 // @downloadURL  https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js
