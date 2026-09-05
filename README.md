@@ -4,8 +4,8 @@
 
 ### *Desktop-Class Notion Superpowers, Redesigned for Mobile Touch.*
 
-[![Build Status](https://github.com/intelQong/notion-wraper-ios/actions/workflows/build-ios.yml/badge.svg)](https://github.com/intelQong/notion-wraper-ios/actions/workflows/build-ios.yml)
-[![Latest Release](https://img.shields.io/github/v/release/intelQong/notion-wraper-ios?color=007AFF&logo=apple&logoColor=white&label=Release)](https://github.com/intelQong/notion-wraper-ios/releases)
+[![Build Status](https://github.com/intelQong/NotionFlow/actions/workflows/build-ios.yml/badge.svg)](https://github.com/intelQong/NotionFlow/actions/workflows/build-ios.yml)
+[![Latest Release](https://img.shields.io/github/v/release/intelQong/NotionFlow?color=007AFF&logo=apple&logoColor=white&label=Release)](https://github.com/intelQong/NotionFlow/releases)
 [![iOS Compatibility](https://img.shields.io/badge/iOS-16.0%2B-000000?logo=apple&logoColor=white)](https://apple.com/ios)
 [![Capacitor](https://img.shields.io/badge/Capacitor-7.0-119EFF?logo=capacitor&logoColor=white)](https://capacitorjs.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -105,11 +105,11 @@ Power users navigating Notion on iOS frequently face two unsatisfactory extremes
 Choose either option:
 
 * **Option A (Direct File Download)**:
-  1. Download [`dist/notion-flow.user.js`](https://raw.githubusercontent.com/intelQong/notion-wraper-ios/main/dist/notion-flow.user.js) directly to your configured Userscripts folder.
+  1. Download [`dist/notion-flow.user.js`](https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js) directly to your configured Userscripts folder.
   2. The extension will automatically detect and enable it.
 
 * **Option B (Copy & Paste via Safari)**:
-  1. Open the raw [`notion-flow.user.js`](https://raw.githubusercontent.com/intelQong/notion-wraper-ios/main/dist/notion-flow.user.js) file and copy its content.
+  1. Open the raw [`notion-flow.user.js`](https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js) file and copy its content.
   2. In Safari, tap the **Extensions** icon (🧩 or `aA`) in the address bar ➔ **Userscripts**.
   3. Tap **`+` (New Script)**, paste the code, and tap **Save**.
 
@@ -132,8 +132,8 @@ For a fully packaged native `.ipa` with custom WebKit controllers and offline as
 
 ```bash
 # 1. Clone repository & install dependencies
-git clone https://github.com/intelQong/notion-wraper-ios.git
-cd notion-wraper-ios
+git clone https://github.com/intelQong/NotionFlow.git
+cd NotionFlow
 npm install
 
 # 2. Compile web assets & userscript bundles
