@@ -167,13 +167,26 @@ export function initSpoofing(): void {
 
   // 7. Suppress Notion Mobile Smart App Banner and Deep Linking
   const suppressMobileBanners = () => {
-    // Remove Apple Smart App Banner
-    const appBanner = document.querySelector('meta[name="apple-itunes-app"]');
-    if (appBanner) {
-      appBanner.remove();
-    }
+    // Remove Apple Smart App Banner immediately and observe for late injections
+    const killAppBanner = () => {
+      const metas = document.querySelectorAll('meta[name="apple-itunes-app"]');
+      metas.forEach((m) => {
+        try {
+          m.setAttribute('content', '');
+          m.remove();
+        } catch {}
+      });
+    };
+    killAppBanner();
 
-    // Suppress "Open in Notion app" bottom sheets and interstitials
+    try {
+      if (typeof MutationObserver !== 'undefined' && (document.documentElement || document.head)) {
+        const metaObserver = new MutationObserver(() => killAppBanner());
+        metaObserver.observe(document.documentElement || document.head, { childList: true, subtree: true });
+      }
+    } catch {}
+
+    // Suppress "Open in Notion app" bottom sheets, banners, and mobile promotional overlays
     const style = document.createElement('style');
     style.id = 'notionflow-anti-mobile-banner';
     style.textContent = `
@@ -181,6 +194,8 @@ export function initSpoofing(): void {
       .notion-mobile-app-banner,
       .notion-mobile-banner,
       [data-testid="mobile-app-banner"],
+      div:has(> a[href*="apple.com/app/notion"]),
+      div:has(> a[href*="itunes.apple.com"]),
       div[style*="position: fixed"][style*="bottom: 0"] a[href*="itunes.apple.com"],
       div[style*="position: fixed"][style*="bottom: 0"] a[href*="notion.so/mobile"],
       div[style*="position: fixed"][style*="bottom: 0"] a[href*="notion.com/mobile"] {
@@ -194,11 +209,21 @@ export function initSpoofing(): void {
     }
   };
 
+  suppressMobileBanners();
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', suppressMobileBanners);
-  } else {
-    suppressMobileBanners();
   }
+
+  // 8. Neutralize mobile app feature flags
+  try {
+    (window as any).__mobileAppFeatures = {};
+    Object.defineProperty(window, '__mobileAppFeatures', {
+      get: () => ({}),
+      set: () => {},
+      configurable: true,
+      enumerable: true
+    });
+  } catch {}
 
   // 8. Intercept window.open targeting mobile redirects
   const originalOpen = window.open;

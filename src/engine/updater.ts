@@ -4,7 +4,7 @@
  * and alerts the user with 1-tap update installation.
  */
 
-export const NOTIONFLOW_VERSION = '1.3.3';
+export const NOTIONFLOW_VERSION = '1.3.4';
 export const NOTIONFLOW_RAW_URL = 'https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js';
 
 import { safeAppend, safeAppendBody, safeSetHTML } from './dom-utils';

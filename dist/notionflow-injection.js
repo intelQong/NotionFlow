@@ -212,9 +212,23 @@
       console.warn("[NotionFlow] CONFIG intercept error:", e);
     }
     const suppressMobileBanners = () => {
-      const appBanner = document.querySelector('meta[name="apple-itunes-app"]');
-      if (appBanner) {
-        appBanner.remove();
+      const killAppBanner = () => {
+        const metas = document.querySelectorAll('meta[name="apple-itunes-app"]');
+        metas.forEach((m) => {
+          try {
+            m.setAttribute("content", "");
+            m.remove();
+          } catch {
+          }
+        });
+      };
+      killAppBanner();
+      try {
+        if (typeof MutationObserver !== "undefined" && (document.documentElement || document.head)) {
+          const metaObserver = new MutationObserver(() => killAppBanner());
+          metaObserver.observe(document.documentElement || document.head, { childList: true, subtree: true });
+        }
+      } catch {
       }
       const style = document.createElement("style");
       style.id = "notionflow-anti-mobile-banner";
@@ -223,6 +237,8 @@
       .notion-mobile-app-banner,
       .notion-mobile-banner,
       [data-testid="mobile-app-banner"],
+      div:has(> a[href*="apple.com/app/notion"]),
+      div:has(> a[href*="itunes.apple.com"]),
       div[style*="position: fixed"][style*="bottom: 0"] a[href*="itunes.apple.com"],
       div[style*="position: fixed"][style*="bottom: 0"] a[href*="notion.so/mobile"],
       div[style*="position: fixed"][style*="bottom: 0"] a[href*="notion.com/mobile"] {
@@ -235,10 +251,20 @@
         safeAppend(style);
       }
     };
+    suppressMobileBanners();
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", suppressMobileBanners);
-    } else {
-      suppressMobileBanners();
+    }
+    try {
+      window.__mobileAppFeatures = {};
+      Object.defineProperty(window, "__mobileAppFeatures", {
+        get: () => ({}),
+        set: () => {
+        },
+        configurable: true,
+        enumerable: true
+      });
+    } catch {
     }
     const originalOpen = window.open;
     window.open = function(url, target, features) {
@@ -1467,7 +1493,7 @@
   };
 
   // src/engine/updater.ts
-  var NOTIONFLOW_VERSION = "1.3.3";
+  var NOTIONFLOW_VERSION = "1.3.4";
   var NOTIONFLOW_RAW_URL = "https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js";
   var UpdateChecker = class {
     lastCheckKey = "notionflow_last_update_check";
