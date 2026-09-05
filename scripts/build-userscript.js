@@ -12,10 +12,12 @@ const banner = `// ==UserScript==
 // @version      1.1.0
 // @description  Forces desktop Notion on iOS with dynamic UI/UX adaptation: snap carousels, sticky table headers, touch handles, and floating toolbar.
 // @author       intelQong
-// @match        https://*.notion.so/*
-// @match        https://notion.so/*
+// @match        https://app.notion.com/*
 // @match        https://*.notion.com/*
 // @match        https://notion.com/*
+// @match        https://app.notion.so/*
+// @match        https://*.notion.so/*
+// @match        https://notion.so/*
 // @match        https://*.notion.site/*
 // @run-at       document-start
 // @grant        none
