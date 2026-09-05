@@ -2,7 +2,7 @@
 // @name         NotionFlow - Desktop Mode for iOS & iPadOS
 // @namespace    https://github.com/intelQong/NotionFlow
 // @version      1.4.0
-// @description  Forces full desktop Notion on iOS and iPadOS with responsive sidebars, modals, and smooth touch scrolling.
+// @description  Pure, bloat-free Desktop Notion on iOS & iPadOS Safari via lightweight userscript.
 // @author       intelQong
 // @updateURL    https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js
 // @downloadURL  https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js

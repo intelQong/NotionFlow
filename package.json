@@ -1,7 +1,7 @@
 {
   "name": "notionflow",
   "version": "1.4.0",
-  "description": "Desktop-class Notion superpowers on iOS Safari via lightweight userscript",
+  "description": "Pure, bloat-free Desktop Notion on iOS & iPadOS Safari via lightweight userscript",
   "type": "module",
   "scripts": {
     "dev": "vite",
