@@ -20,7 +20,8 @@
   <a href="#-how-to-add-to-your-iphone--ipad-home-screen">Add to Home Screen</a> •
   <a href="#-how-it-works-under-the-hood">How It Works</a> •
   <a href="#-development--verification">Development & Tests</a> •
-  <a href="#-contributing">Contributing</a>
+  <a href="#-contributing">Contributing</a> •
+  <a href="#-disclaimer">Disclaimer</a>
 </p>
 
 </div>
@@ -204,8 +205,17 @@ Contributions, issues, and feature suggestions are welcome!
 
 ---
 
+## ⚖️ Disclaimer
+
+Notion is a registered trademark of Notion Labs, Inc.
+
+NotionFlow is an independent open-source project and is not affiliated with, endorsed by, sponsored by, or in any way officially connected with Notion Labs, Inc. or any of its subsidiaries. All product and company names are trademarks™ or registered® trademarks of their respective holders; use of them does not imply any affiliation with or endorsement by them.
+
+---
+
 ## 📄 License
 
 Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
 
 Crafted with ❤️ by [intelQong](https://github.com/intelQong).
+
