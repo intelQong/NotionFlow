@@ -177,11 +177,14 @@ The build outputs:
 
 ### Automated Verification with Playwright WebKit
 
-NotionFlow includes automated Playwright tests that inject the script into real WebKit browser engines emulating iPhone 14 Pro and iPad Pro viewports against live `app.notion.com`:
+A Playwright smoke test injects the built bundle into WebKit emulating iPhone 14 Pro and iPad Pro 11, and checks the UA/platform spoofing, touch-detection stripping, `CONFIG.isMobile` lock, Smart App Banner removal and redirect blocking:
 
 ```bash
-# Run Playwright WebKit test suite
-python3 scratch/test_v140_playwright.py
+# One-time setup
+pip install playwright && playwright install webkit
+
+# Build, then run the smoke test
+npm run build && npm test
 ```
 
 Verified assertions:
