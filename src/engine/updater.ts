@@ -4,10 +4,11 @@
  * and alerts the user with 1-tap update installation.
  */
 
-export const NOTIONFLOW_VERSION = '1.4.0';
-export const NOTIONFLOW_RAW_URL = 'https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js';
-
+import { version } from '../../package.json';
 import { safeAppend, safeAppendBody, safeSetHTML } from './dom-utils';
+
+export const NOTIONFLOW_VERSION = version;
+export const NOTIONFLOW_RAW_URL = 'https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js';
 
 export class UpdateChecker {
   private lastCheckKey = 'notionflow_last_update_check';
@@ -101,13 +102,13 @@ export class UpdateChecker {
 
   public async check(force: boolean = false): Promise<{ hasUpdate: boolean; latestVersion?: string }> {
     const now = Date.now();
-    const lastCheck = parseInt(localStorage.getItem(this.lastCheckKey) || '0', 10);
-
-    if (!force && now - lastCheck < this.checkIntervalMs) {
-      return { hasUpdate: false };
-    }
 
     try {
+      const lastCheck = parseInt(localStorage.getItem(this.lastCheckKey) || '0', 10);
+      if (!force && now - lastCheck < this.checkIntervalMs) {
+        return { hasUpdate: false };
+      }
+
       let scriptText = '';
       const gmxhr =
         typeof (window as any).GM_xmlhttpRequest === 'function'
@@ -140,8 +141,7 @@ export class UpdateChecker {
           cache: 'no-cache',
           headers: { Accept: 'text/plain' },
           signal: controller.signal
-        });
-        clearTimeout(timeoutId);
+        }).finally(() => clearTimeout(timeoutId));
 
         if (!response.ok) return { hasUpdate: false };
         scriptText = await response.text();
@@ -190,7 +190,7 @@ export class UpdateChecker {
         <div><strong>NotionFlow v${newVersion}</strong> is available!</div>
         <div style="font-size: 11px; color: #aaa;">Current: v${NOTIONFLOW_VERSION}</div>
       </div>
-      <a class="notionflow-update-btn" href="${NOTIONFLOW_RAW_URL}" target="_blank">Update</a>
+      <a class="notionflow-update-btn" href="${NOTIONFLOW_RAW_URL}" target="_blank" rel="noopener">Update</a>
       <button class="notionflow-update-dismiss" id="notionflow-dismiss-update">✕</button>
     `
     );

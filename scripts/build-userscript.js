@@ -6,10 +6,12 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const { version } = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf-8'));
+
 const banner = `// ==UserScript==
 // @name         NotionFlow - Desktop Mode for iOS & iPadOS
 // @namespace    https://github.com/intelQong/NotionFlow
-// @version      1.4.0
+// @version      ${version}
 // @description  Pure, bloat-free Desktop Notion on iOS & iPadOS Safari via lightweight userscript.
 // @author       intelQong
 // @updateURL    https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js

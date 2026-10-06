@@ -58,7 +58,7 @@ export function initSpoofing(): void {
     overrideProp(t, 'userAgentData', () => uad);
   }
 
-  // 3. MatchMedia overrides for desktop hover and fine pointer capability
+  // 3. MatchMedia override: report non-standalone display mode
   try {
     const origMatchMedia = window.matchMedia;
     if (origMatchMedia) {
@@ -76,7 +76,7 @@ export function initSpoofing(): void {
     console.warn('[NotionFlow] matchMedia override skipped:', e);
   }
 
-  // 5. Neutralize Notion's iPad detection ("ontouchend" in document)
+  // 4. Neutralize Notion's iPad detection ("ontouchend" in document)
   // Notion checks: ("MacIntel" === a.platform && "ontouchend" in document) to identify iPads.
   // Stripping touch event listener properties from Document, Window, and Element prototypes
   // ensures Notion's module 900532 evaluates isIpad=false, isIOS=false, isMobile=false, isDesktop=true.
@@ -103,7 +103,7 @@ export function initSpoofing(): void {
     console.warn('[NotionFlow] ontouchend neutralization error:', e);
   }
 
-  // 6. Intercept Notion's module 386961 global CONFIG
+  // 5. Intercept Notion's module 386961 global CONFIG
   // Ensure window.CONFIG.isMobile is locked to false without clobbering Notion's configuration.
   // CRITICAL: NEVER set window.CONFIG_OVERRIDE to a partial object! Notion treats CONFIG_OVERRIDE
   // as a complete configuration replacement; setting a partial object wipes out Notion's
@@ -113,28 +113,29 @@ export function initSpoofing(): void {
       delete (window as any).CONFIG_OVERRIDE;
     }
 
-    let configVal: any = (window as any).CONFIG;
-    if (configVal && typeof configVal === 'object') {
+    const lockIsMobile = (val: any) => {
+      if (!val || typeof val !== 'object') return;
       try {
-        configVal.isMobile = false;
-      } catch {}
-    }
+        Object.defineProperty(val, 'isMobile', {
+          get: () => false,
+          set: () => {},
+          configurable: true,
+          enumerable: true
+        });
+      } catch {
+        try {
+          val.isMobile = false;
+        } catch {}
+      }
+    };
+
+    let configVal: any = (window as any).CONFIG;
+    lockIsMobile(configVal);
 
     Object.defineProperty(window, 'CONFIG', {
       get: () => configVal,
       set: (val) => {
-        if (val && typeof val === 'object') {
-          try {
-            Object.defineProperty(val, 'isMobile', {
-              get: () => false,
-              set: () => {},
-              configurable: true,
-              enumerable: true
-            });
-          } catch {
-            val.isMobile = false;
-          }
-        }
+        lockIsMobile(val);
         configVal = val;
       },
       configurable: true,
@@ -144,7 +145,7 @@ export function initSpoofing(): void {
     console.warn('[NotionFlow] CONFIG intercept error:', e);
   }
 
-  // 7. Suppress Notion Mobile Smart App Banner and Deep Linking
+  // 6. Suppress Notion Mobile Smart App Banner and Deep Linking
   const suppressMobileBanners = () => {
     // Remove Apple Smart App Banner immediately and observe for late injections
     const killAppBanner = () => {
@@ -158,10 +159,23 @@ export function initSpoofing(): void {
     };
     killAppBanner();
 
+    // Watch the whole document only while parsing; afterwards the banner meta can only land in <head>,
+    // so narrow the observer instead of re-querying on every Notion DOM mutation.
     try {
-      if (typeof MutationObserver !== 'undefined' && (document.documentElement || document.head)) {
-        const metaObserver = new MutationObserver(() => killAppBanner());
-        metaObserver.observe(document.documentElement || document.head, { childList: true, subtree: true });
+      const metaObserver = new MutationObserver(killAppBanner);
+      // documentElement can still be null this early at document-start
+      if (document.documentElement) {
+        metaObserver.observe(document.documentElement, { childList: true, subtree: true });
+      }
+      const narrow = () => {
+        killAppBanner();
+        metaObserver.disconnect();
+        if (document.head) metaObserver.observe(document.head, { childList: true });
+      };
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', narrow, { once: true });
+      } else {
+        narrow();
       }
     } catch {}
 
@@ -231,11 +245,8 @@ export function initSpoofing(): void {
   };
 
   suppressMobileBanners();
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', suppressMobileBanners);
-  }
 
-  // 8. Neutralize mobile app feature flags
+  // 7. Neutralize mobile app feature flags
   try {
     (window as any).__mobileAppFeatures = {};
     Object.defineProperty(window, '__mobileAppFeatures', {
@@ -246,14 +257,13 @@ export function initSpoofing(): void {
     });
   } catch {}
 
-  // 9. Intercept window.open targeting mobile redirects
+  // 8. Intercept window.open targeting mobile redirects
   const originalOpen = window.open;
   window.open = function (url?: string | URL, target?: string, features?: string): Window | null {
-    if (typeof url === 'string') {
-      if (url.includes('itunes.apple.com') || url.startsWith('notion://')) {
-        console.log('[NotionFlow] Suppressed native app store / deeplink redirect:', url);
-        return null;
-      }
+    const href = url == null ? '' : String(url);
+    if (/(itunes|apps)\.apple\.com/.test(href) || href.startsWith('notion://')) {
+      console.log('[NotionFlow] Suppressed native app store / deeplink redirect:', href);
+      return null;
     }
     return originalOpen.call(window, url, target, features);
   };

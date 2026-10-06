@@ -183,29 +183,29 @@
       if (window.CONFIG_OVERRIDE && !window.CONFIG_OVERRIDE.env) {
         delete window.CONFIG_OVERRIDE;
       }
-      let configVal = window.CONFIG;
-      if (configVal && typeof configVal === "object") {
+      const lockIsMobile = (val) => {
+        if (!val || typeof val !== "object") return;
         try {
-          configVal.isMobile = false;
+          Object.defineProperty(val, "isMobile", {
+            get: () => false,
+            set: () => {
+            },
+            configurable: true,
+            enumerable: true
+          });
         } catch {
+          try {
+            val.isMobile = false;
+          } catch {
+          }
         }
-      }
+      };
+      let configVal = window.CONFIG;
+      lockIsMobile(configVal);
       Object.defineProperty(window, "CONFIG", {
         get: () => configVal,
         set: (val) => {
-          if (val && typeof val === "object") {
-            try {
-              Object.defineProperty(val, "isMobile", {
-                get: () => false,
-                set: () => {
-                },
-                configurable: true,
-                enumerable: true
-              });
-            } catch {
-              val.isMobile = false;
-            }
-          }
+          lockIsMobile(val);
           configVal = val;
         },
         configurable: true,
@@ -227,9 +227,19 @@
       };
       killAppBanner();
       try {
-        if (typeof MutationObserver !== "undefined" && (document.documentElement || document.head)) {
-          const metaObserver = new MutationObserver(() => killAppBanner());
-          metaObserver.observe(document.documentElement || document.head, { childList: true, subtree: true });
+        const metaObserver = new MutationObserver(killAppBanner);
+        if (document.documentElement) {
+          metaObserver.observe(document.documentElement, { childList: true, subtree: true });
+        }
+        const narrow = () => {
+          killAppBanner();
+          metaObserver.disconnect();
+          if (document.head) metaObserver.observe(document.head, { childList: true });
+        };
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", narrow, { once: true });
+        } else {
+          narrow();
         }
       } catch {
       }
@@ -296,9 +306,6 @@
       }
     };
     suppressMobileBanners();
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", suppressMobileBanners);
-    }
     try {
       window.__mobileAppFeatures = {};
       Object.defineProperty(window, "__mobileAppFeatures", {
@@ -312,19 +319,21 @@
     }
     const originalOpen = window.open;
     window.open = function(url, target, features) {
-      if (typeof url === "string") {
-        if (url.includes("itunes.apple.com") || url.startsWith("notion://")) {
-          console.log("[NotionFlow] Suppressed native app store / deeplink redirect:", url);
-          return null;
-        }
+      const href = url == null ? "" : String(url);
+      if (/(itunes|apps)\.apple\.com/.test(href) || href.startsWith("notion://")) {
+        console.log("[NotionFlow] Suppressed native app store / deeplink redirect:", href);
+        return null;
       }
       return originalOpen.call(window, url, target, features);
     };
     console.log("[NotionFlow] Full Desktop Mode Active on iOS & iPadOS \u{1F5A5}\uFE0F");
   }
 
+  // package.json
+  var version = "1.4.0";
+
   // src/engine/updater.ts
-  var NOTIONFLOW_VERSION = "1.4.0";
+  var NOTIONFLOW_VERSION = version;
   var NOTIONFLOW_RAW_URL = "https://raw.githubusercontent.com/intelQong/NotionFlow/main/dist/notion-flow.user.js";
   var UpdateChecker = class {
     lastCheckKey = "notionflow_last_update_check";
@@ -413,11 +422,11 @@
     }
     async check(force = false) {
       const now = Date.now();
-      const lastCheck = parseInt(localStorage.getItem(this.lastCheckKey) || "0", 10);
-      if (!force && now - lastCheck < this.checkIntervalMs) {
-        return { hasUpdate: false };
-      }
       try {
+        const lastCheck = parseInt(localStorage.getItem(this.lastCheckKey) || "0", 10);
+        if (!force && now - lastCheck < this.checkIntervalMs) {
+          return { hasUpdate: false };
+        }
         let scriptText = "";
         const gmxhr = typeof window.GM_xmlhttpRequest === "function" ? window.GM_xmlhttpRequest : typeof window.GM?.xmlHttpRequest === "function" ? window.GM.xmlHttpRequest : null;
         if (gmxhr) {
@@ -444,8 +453,7 @@
             cache: "no-cache",
             headers: { Accept: "text/plain" },
             signal: controller.signal
-          });
-          clearTimeout(timeoutId);
+          }).finally(() => clearTimeout(timeoutId));
           if (!response.ok) return { hasUpdate: false };
           scriptText = await response.text();
         }
@@ -486,7 +494,7 @@
         <div><strong>NotionFlow v${newVersion}</strong> is available!</div>
         <div style="font-size: 11px; color: #aaa;">Current: v${NOTIONFLOW_VERSION}</div>
       </div>
-      <a class="notionflow-update-btn" href="${NOTIONFLOW_RAW_URL}" target="_blank">Update</a>
+      <a class="notionflow-update-btn" href="${NOTIONFLOW_RAW_URL}" target="_blank" rel="noopener">Update</a>
       <button class="notionflow-update-dismiss" id="notionflow-dismiss-update">\u2715</button>
     `
       );
